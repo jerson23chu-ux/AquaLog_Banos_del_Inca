@@ -3,16 +3,30 @@ import pandas as pd
 import math
 import os
 from datetime import date, datetime
+from io import BytesIO
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    PageBreak
+)
 
 
 # ============================================================
 # AQUAlog BI
-# Sistema interactivo para análisis y gestión eficiente del agua
+# Inteligencia matemática para la gestión eficiente del agua
 # ============================================================
 
 
 # ============================================================
-# 1. CONFIGURACIÓN GENERAL
+# 1. CONFIGURACIÓN
 # ============================================================
 
 st.set_page_config(
@@ -53,169 +67,318 @@ COLUMNAS = [
 
 
 # ============================================================
-# 2. ESTILOS
+# 2. DISEÑO Y CONTRASTE
 # ============================================================
 
 st.markdown(
     """
     <style>
 
+    /* =====================================================
+       FONDO GENERAL
+       ===================================================== */
+
     .stApp {
         background:
             radial-gradient(
-                circle at 10% 8%,
-                rgba(0,174,239,0.10),
-                transparent 22%
+                circle at 12% 8%,
+                rgba(0, 174, 239, 0.10),
+                transparent 23%
             ),
             radial-gradient(
-                circle at 90% 12%,
-                rgba(0,87,230,0.08),
+                circle at 88% 12%,
+                rgba(0, 92, 230, 0.08),
                 transparent 25%
             ),
             linear-gradient(
                 135deg,
-                #f6fcff 0%,
-                #edf8ff 52%,
+                #f4fbff 0%,
+                #edf8ff 55%,
                 #ffffff 100%
             );
     }
 
     .block-container {
         max-width: 1450px;
-        padding-top: 1.3rem;
+        padding-top: 1.4rem;
         padding-bottom: 2rem;
     }
 
+
+    /* =====================================================
+       TEXTO DEL CONTENIDO PRINCIPAL
+       ===================================================== */
+
     h1, h2, h3 {
-        color: #0b4f7c !important;
+        color: #064c78 !important;
     }
+
+    .main p {
+        color: #294e62;
+    }
+
+    [data-testid="stMarkdownContainer"] p {
+        color: #294e62;
+    }
+
+
+    /* =====================================================
+       SIDEBAR
+       IMPORTANTE: YA NO SE OBLIGA TODO A SER BLANCO
+       ===================================================== */
 
     [data-testid="stSidebar"] {
         background:
             linear-gradient(
                 180deg,
-                #043b8f 0%,
-                #0875d1 52%,
-                #00a6c9 100%
+                #043783 0%,
+                #0870c8 52%,
+                #00a2c6 100%
             );
         border-right:
-            1px solid rgba(255,255,255,0.14);
+            1px solid rgba(255,255,255,0.18);
     }
 
-    [data-testid="stSidebar"] * {
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
         color: white !important;
+    }
+
+    [data-testid="stSidebar"] p {
+        color: #e8f8ff !important;
+    }
+
+    [data-testid="stSidebar"] label {
+        color: white !important;
+    }
+
+    [data-testid="stSidebar"] [role="radiogroup"] label p {
+        color: white !important;
+        font-weight: 650;
     }
 
     [data-testid="stSidebar"] hr {
         border-color: rgba(255,255,255,0.25);
     }
 
+
+    /* =====================================================
+       INPUTS - TEXTO OSCURO SOBRE FONDO BLANCO
+       ===================================================== */
+
+    input {
+        color: #102f40 !important;
+        background-color: white !important;
+    }
+
+    textarea {
+        color: #102f40 !important;
+        background-color: white !important;
+    }
+
+    [data-baseweb="input"] {
+        background-color: white !important;
+    }
+
+    [data-baseweb="input"] input {
+        color: #102f40 !important;
+    }
+
+    [data-baseweb="textarea"] {
+        background-color: white !important;
+    }
+
+    [data-baseweb="textarea"] textarea {
+        color: #102f40 !important;
+    }
+
+    [data-baseweb="select"] > div {
+        background-color: white !important;
+        color: #102f40 !important;
+    }
+
+    [data-baseweb="select"] span {
+        color: #102f40 !important;
+    }
+
+    [data-baseweb="popover"] {
+        color: #102f40 !important;
+    }
+
+    [role="option"] {
+        color: #102f40 !important;
+        background-color: white !important;
+    }
+
+    [role="option"]:hover {
+        background-color: #e8f6ff !important;
+    }
+
+
+    /* =====================================================
+       ETIQUETAS DE FORMULARIOS
+       ===================================================== */
+
+    [data-testid="stWidgetLabel"] p {
+        color: #234b61 !important;
+        font-weight: 700 !important;
+    }
+
+
+    /* =====================================================
+       MÉTRICAS
+       ===================================================== */
+
     div[data-testid="stMetric"] {
         background: rgba(255,255,255,0.97);
-        border: 1px solid rgba(0,100,160,0.11);
-        padding: 16px 17px;
+        border: 1px solid rgba(0,100,160,0.12);
+        padding: 16px 18px;
         border-radius: 18px;
-        box-shadow: 0 8px 24px rgba(0,70,120,0.07);
+        box-shadow:
+            0 8px 24px
+            rgba(0,70,120,0.07);
     }
 
     [data-testid="stMetricValue"] {
-        color: #0869ce !important;
+        color: #0867c8 !important;
         font-weight: 850;
     }
 
     [data-testid="stMetricLabel"] {
-        color: #45677d !important;
+        color: #496a7d !important;
         font-weight: 700;
     }
+
+
+    /* =====================================================
+       HERO
+       ===================================================== */
 
     .hero {
         background:
             linear-gradient(
                 120deg,
-                #043a91 0%,
+                #043783 0%,
                 #0875d1 50%,
-                #12b7dc 100%
+                #12b8da 100%
             );
+
         border-radius: 28px;
         padding: 30px 34px;
         margin-bottom: 24px;
+
         box-shadow:
             0 18px 45px
             rgba(8,92,160,0.22);
+
         color: white;
     }
 
     .hero-title {
-        font-size: 45px;
+        font-size: 46px;
         font-weight: 900;
-        line-height: 1.05;
-        margin-bottom: 8px;
         color: white !important;
+        line-height: 1.05;
     }
 
     .hero-subtitle {
+        color: white !important;
         font-size: 20px;
         font-weight: 700;
-        color: white !important;
-        margin-bottom: 9px;
+        margin-top: 7px;
     }
 
     .hero-text {
-        max-width: 950px;
-        line-height: 1.6;
-        font-size: 15px;
         color: #effcff !important;
+        font-size: 15px;
+        line-height: 1.55;
+        margin-top: 8px;
+        max-width: 1000px;
     }
 
     .chip {
         display: inline-block;
-        margin: 11px 7px 0 0;
+        margin: 12px 7px 0 0;
         padding: 7px 12px;
+
+        background:
+            rgba(255,255,255,0.14);
+
+        border:
+            1px solid
+            rgba(255,255,255,0.25);
+
         border-radius: 999px;
-        background: rgba(255,255,255,0.13);
-        border: 1px solid rgba(255,255,255,0.24);
+
         color: white !important;
         font-size: 12px;
-        font-weight: 700;
+        font-weight: 750;
     }
+
+
+    /* =====================================================
+       TARJETAS
+       ===================================================== */
 
     .card {
-        background: rgba(255,255,255,0.96);
-        border: 1px solid rgba(0,100,160,0.11);
+        background: white;
+        border: 1px solid #d7ebf5;
         border-radius: 18px;
+
         padding: 18px 20px;
         margin: 8px 0 14px 0;
+
         box-shadow:
-            0 8px 23px
+            0 8px 22px
             rgba(0,70,120,0.06);
+
+        color: #294e62 !important;
     }
 
+    .card h3 {
+        color: #07527f !important;
+    }
+
+    .card p {
+        color: #294e62 !important;
+    }
+
+
+    /* =====================================================
+       ALERTAS PERSONALIZADAS
+       ===================================================== */
+
     .alert-red {
-        background: #fff4f4;
-        border-left: 6px solid #dc3545;
-        padding: 14px 17px;
+        background: #fff1f1;
+        color: #71272d !important;
+        border-left: 6px solid #d93645;
         border-radius: 13px;
+        padding: 14px 17px;
         margin-bottom: 9px;
     }
 
     .alert-green {
-        background: #f0fff7;
+        background: #ecfff4;
+        color: #155c3a !important;
         border-left: 6px solid #18a568;
-        padding: 14px 17px;
         border-radius: 13px;
+        padding: 14px 17px;
         margin-bottom: 9px;
     }
 
     .alert-yellow {
-        background: #fffbea;
+        background: #fff9df;
+        color: #6f5810 !important;
         border-left: 6px solid #e5ad17;
-        padding: 14px 17px;
         border-radius: 13px;
+        padding: 14px 17px;
         margin-bottom: 9px;
     }
 
     .tip {
         background: white;
+        color: #294e62 !important;
         border-left: 6px solid #0b8fe3;
         border-radius: 14px;
         padding: 15px 18px;
@@ -223,17 +386,51 @@ st.markdown(
         box-shadow: 0 5px 16px rgba(0,0,0,0.05);
     }
 
-    .footer {
-        text-align: center;
-        color: #557286;
-        padding: 18px 0 5px 0;
-        font-size: 13px;
+
+    /* =====================================================
+       BOTONES
+       ===================================================== */
+
+    .stButton button {
+        border-radius: 12px;
+        font-weight: 750;
     }
 
-    .stButton button,
     .stDownloadButton button {
         border-radius: 12px;
         font-weight: 750;
+    }
+
+
+    /* =====================================================
+       TABLAS
+       ===================================================== */
+
+    [data-testid="stDataFrame"] {
+        background-color: white;
+        border-radius: 14px;
+    }
+
+
+    /* =====================================================
+       PESTAÑAS
+       ===================================================== */
+
+    button[data-baseweb="tab"] {
+        color: #184c68 !important;
+        font-weight: 700 !important;
+    }
+
+
+    /* =====================================================
+       PIE DE PÁGINA
+       ===================================================== */
+
+    .footer {
+        text-align: center;
+        color: #557286 !important;
+        padding: 18px 0 5px 0;
+        font-size: 13px;
     }
 
     </style>
@@ -243,7 +440,7 @@ st.markdown(
 
 
 # ============================================================
-# 3. COMPONENTES VISUALES
+# 3. ELEMENTOS VISUALES
 # ============================================================
 
 def hero():
@@ -251,16 +448,20 @@ def hero():
     st.markdown(
         '<div class="hero">'
         '<div class="hero-title">💧 AquaLog BI</div>'
-        '<div class="hero-subtitle">Inteligencia matemática para la gestión eficiente del agua</div>'
-        '<div class="hero-text">'
-        'Registra, analiza, compara y proyecta el consumo de agua mediante indicadores matemáticos, '
-        'seguimiento histórico, alertas y escenarios de ahorro.'
+        '<div class="hero-subtitle">'
+        'Inteligencia matemática para la gestión eficiente del agua'
         '</div>'
+        '<div class="hero-text">'
+        'Sistema interactivo para registrar, analizar, comparar '
+        'y proyectar el consumo de agua mediante indicadores matemáticos, '
+        'seguimiento histórico, alertas automáticas y escenarios de ahorro.'
+        '</div>'
+        '<span class="chip">💧 Consumo</span>'
+        '<span class="chip">🧮 Matemática</span>'
         '<span class="chip">📊 Analítica</span>'
-        '<span class="chip">🧮 Modelo matemático</span>'
         '<span class="chip">🚨 Alertas</span>'
-        '<span class="chip">🎯 Simulación</span>'
-        '<span class="chip">📈 Seguimiento</span>'
+        '<span class="chip">🎯 Proyección</span>'
+        '<span class="chip">📄 Reportes</span>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -277,7 +478,7 @@ def card(titulo, texto, icono="💧"):
     )
 
 
-def alerta_html(tipo, titulo, texto):
+def mostrar_alerta(tipo, titulo, texto):
 
     clase = {
         "rojo": "alert-red",
@@ -311,7 +512,9 @@ def tip(titulo, texto):
 
 def dataframe_vacio():
 
-    return pd.DataFrame(columns=COLUMNAS)
+    return pd.DataFrame(
+        columns=COLUMNAS
+    )
 
 
 def normalizar_df(df):
@@ -369,10 +572,10 @@ def normalizar_df(df):
         "Costo del periodo (S/)"
     ]
 
-    for col in numericas:
+    for columna in numericas:
 
-        df[col] = pd.to_numeric(
-            df[col],
+        df[columna] = pd.to_numeric(
+            df[columna],
             errors="coerce"
         ).fillna(0)
 
@@ -388,17 +591,19 @@ def normalizar_df(df):
         .astype(int)
     )
 
-    df["Fecha"] = pd.to_datetime(
+    fecha_convertida = pd.to_datetime(
         df["Fecha"],
         errors="coerce"
     )
 
-    df["Fecha"] = df["Fecha"].fillna(
-        pd.Timestamp.today()
+    fecha_convertida = (
+        fecha_convertida
+        .fillna(pd.Timestamp.today())
     )
 
-    df["Fecha"] = df["Fecha"].dt.strftime(
-        "%Y-%m-%d"
+    df["Fecha"] = (
+        fecha_convertida
+        .dt.strftime("%Y-%m-%d")
     )
 
     return df[COLUMNAS]
@@ -406,15 +611,21 @@ def normalizar_df(df):
 
 def cargar_datos():
 
-    if not os.path.exists(ARCHIVO_DATOS):
+    if not os.path.exists(
+        ARCHIVO_DATOS
+    ):
         return dataframe_vacio()
 
     try:
+
         return normalizar_df(
-            pd.read_csv(ARCHIVO_DATOS)
+            pd.read_csv(
+                ARCHIVO_DATOS
+            )
         )
 
     except Exception:
+
         return dataframe_vacio()
 
 
@@ -441,13 +652,23 @@ def analizar_consumo(
     tarifa
 ):
 
-    personas = max(int(personas), 1)
-    dias = max(int(dias), 1)
+    personas = max(
+        int(personas),
+        1
+    )
 
-    consumo_diario = consumo / dias
+    dias = max(
+        int(dias),
+        1
+    )
 
-    cp = consumo / (
-        personas * dias
+    consumo_diario = (
+        consumo / dias
+    )
+
+    cp = (
+        consumo /
+        (personas * dias)
     )
 
     litros_persona_dia = (
@@ -474,6 +695,7 @@ def analizar_consumo(
             nivel = "ALTO"
 
     else:
+
         nivel = "ANÁLISIS GENERAL"
 
     return {
@@ -487,27 +709,29 @@ def analizar_consumo(
 
 
 # ============================================================
-# 6. COMPARACIÓN ENTRE PERIODOS
+# 6. HISTORIAL Y COMPARACIÓN
 # ============================================================
 
 def historial_codigo(df, codigo):
 
-    temporal = df[
+    historial = df[
         df["Código"].astype(str) ==
         str(codigo)
     ].copy()
 
-    temporal["Fecha_dt"] = pd.to_datetime(
-        temporal["Fecha"],
+    historial["Fecha_dt"] = pd.to_datetime(
+        historial["Fecha"],
         errors="coerce"
     )
 
-    return temporal.sort_values(
+    historial = historial.sort_values(
         "Fecha_dt"
     )
 
+    return historial
 
-def variacion_ultimo_periodo(historial):
+
+def calcular_variacion(historial):
 
     if len(historial) < 2:
         return None
@@ -527,18 +751,20 @@ def variacion_ultimo_periodo(historial):
     if anterior == 0:
         return None
 
-    return (
+    variacion = (
         (actual - anterior) /
         anterior
     ) * 100
 
+    return variacion
 
-def tendencia_consumo(historial):
+
+def calcular_tendencia(historial):
 
     if len(historial) < 3:
         return "SIN DATOS SUFICIENTES"
 
-    ultimos = (
+    valores = (
         historial[
             "Consumo del periodo (m³)"
         ]
@@ -547,16 +773,16 @@ def tendencia_consumo(historial):
     )
 
     if (
-        ultimos[0] <
-        ultimos[1] <
-        ultimos[2]
+        valores[0] <
+        valores[1] <
+        valores[2]
     ):
         return "CRECIENTE"
 
-    if (
-        ultimos[0] >
-        ultimos[1] >
-        ultimos[2]
+    elif (
+        valores[0] >
+        valores[1] >
+        valores[2]
     ):
         return "DECRECIENTE"
 
@@ -564,7 +790,7 @@ def tendencia_consumo(historial):
 
 
 # ============================================================
-# 7. ALERTAS AUTOMÁTICAS
+# 7. ALERTAS
 # ============================================================
 
 def generar_alertas(df):
@@ -590,7 +816,7 @@ def generar_alertas(df):
         if len(hist) < 2:
             continue
 
-        variacion = variacion_ultimo_periodo(
+        variacion = calcular_variacion(
             hist
         )
 
@@ -599,45 +825,42 @@ def generar_alertas(df):
 
         if variacion >= 20:
 
-            alertas.append(
-                {
-                    "tipo": "rojo",
-                    "titulo": f"🔴 Aumento importante — {codigo}",
-                    "texto":
-                        f"El consumo aumentó "
-                        f"{variacion:.1f}% respecto "
-                        f"al periodo anterior."
-                }
-            )
+            alertas.append({
+                "tipo": "rojo",
+                "titulo":
+                    f"🔴 Incremento importante — {codigo}",
+                "texto":
+                    f"El consumo aumentó "
+                    f"{variacion:.1f}% respecto "
+                    f"al registro anterior."
+            })
 
         elif variacion <= -10:
 
-            alertas.append(
-                {
-                    "tipo": "verde",
-                    "titulo": f"🟢 Reducción detectada — {codigo}",
-                    "texto":
-                        f"El consumo disminuyó "
-                        f"{abs(variacion):.1f}% respecto "
-                        f"al periodo anterior."
-                }
-            )
+            alertas.append({
+                "tipo": "verde",
+                "titulo":
+                    f"🟢 Reducción detectada — {codigo}",
+                "texto":
+                    f"El consumo disminuyó "
+                    f"{abs(variacion):.1f}% respecto "
+                    f"al registro anterior."
+            })
 
-        tendencia = tendencia_consumo(
+        tendencia = calcular_tendencia(
             hist
         )
 
         if tendencia == "CRECIENTE":
 
-            alertas.append(
-                {
-                    "tipo": "amarillo",
-                    "titulo": f"🟡 Tendencia creciente — {codigo}",
-                    "texto":
-                        "Los tres últimos registros "
-                        "muestran incrementos consecutivos."
-                }
-            )
+            alertas.append({
+                "tipo": "amarillo",
+                "titulo":
+                    f"🟡 Tendencia creciente — {codigo}",
+                "texto":
+                    "Los tres últimos registros "
+                    "presentan incrementos consecutivos."
+            })
 
     return alertas
 
@@ -651,107 +874,107 @@ def obtener_recomendaciones(
     nivel=None
 ):
 
-    recomendaciones = {
+    datos = {
 
         "Doméstico": [
             (
-                "🚰 Control de caños",
-                "Evita mantener los caños abiertos cuando el agua no sea necesaria."
+                "🚰 Evita desperdicios",
+                "Cierra los caños cuando el agua no sea necesaria."
             ),
             (
-                "🚿 Duchas más eficientes",
-                "Reducir algunos minutos de ducha puede disminuir el consumo acumulado."
+                "🚿 Optimiza las duchas",
+                "Reducir algunos minutos puede generar un ahorro acumulado importante."
             ),
             (
-                "🔧 Revisión de fugas",
-                "Inspecciona conexiones, inodoros, tanques y grifos."
+                "🔧 Busca posibles fugas",
+                "Revisa tanques, grifos, conexiones e inodoros."
             ),
             (
-                "📊 Seguimiento",
-                "Compara cada nuevo registro con el periodo anterior."
+                "📊 Compara tus periodos",
+                "Utiliza el historial de AquaLog BI para identificar cambios."
             )
         ],
 
         "Comercial": [
             (
                 "📋 Control por actividad",
-                "Identifica cuáles actividades concentran el mayor consumo."
+                "Identifica las operaciones que demandan mayor cantidad de agua."
             ),
             (
-                "🔧 Mantenimiento",
-                "Revisa instalaciones y equipos que utilizan agua."
+                "🔧 Mantenimiento preventivo",
+                "Revisa instalaciones y equipos relacionados con el agua."
             ),
             (
-                "🎯 Metas de ahorro",
-                "Establece reducciones graduales y compara resultados."
+                "🎯 Define metas",
+                "Establece objetivos progresivos de reducción."
             )
         ],
 
         "Educativo": [
             (
-                "🏫 Sensibilización",
-                "Promueve hábitos responsables entre estudiantes y trabajadores."
+                "🏫 Educación y sensibilización",
+                "Promueve prácticas responsables entre estudiantes y personal."
             ),
             (
-                "🚰 Servicios higiénicos",
-                "Controla fugas y consumos innecesarios."
+                "🚰 Revisión de instalaciones",
+                "Supervisa servicios higiénicos y puntos de consumo."
             ),
             (
                 "📈 Seguimiento periódico",
-                "Analiza la evolución del consumo de cada periodo."
+                "Compara consumos entre diferentes periodos."
             )
         ],
 
         "Institucional": [
             (
-                "📊 Indicadores",
-                "Compara consumo entre periodos y áreas."
+                "📊 Monitoreo",
+                "Controla los consumos de manera periódica."
             ),
             (
-                "🔧 Mantenimiento preventivo",
-                "Programa inspecciones de conexiones e instalaciones."
+                "🔧 Mantenimiento",
+                "Programa inspecciones preventivas."
             ),
             (
-                "🎯 Objetivos de reducción",
-                "Define metas de consumo medibles."
+                "🎯 Metas de gestión",
+                "Utiliza indicadores para establecer objetivos de reducción."
             )
         ],
 
         "Riego": [
             (
-                "🌅 Horario",
-                "Realiza el riego en horarios de menor evaporación."
+                "🌅 Horarios de riego",
+                "Prefiere periodos de menor evaporación."
             ),
             (
                 "💧 Dosificación",
                 "Evita aplicar más agua de la necesaria."
             ),
             (
-                "🔍 Inspección",
-                "Revisa mangueras, uniones y sistemas de distribución."
+                "🔍 Revisión del sistema",
+                "Comprueba mangueras, tuberías y conexiones."
             )
         ],
 
         "Otro": [
             (
-                "📊 Medición",
-                "Registra el consumo periódicamente."
+                "📊 Medición periódica",
+                "Mantén registros comparables de consumo."
             ),
             (
                 "🔍 Identificación de pérdidas",
-                "Revisa posibles usos innecesarios o fugas."
+                "Evalúa posibles usos innecesarios."
             ),
             (
-                "🎯 Proyección",
-                "Utiliza el simulador para establecer metas de reducción."
+                "🎯 Simulación",
+                "Estudia distintos escenarios mediante AquaLog BI."
             )
         ]
     }
 
     lista = list(
-        recomendaciones.get(
+        datos.get(
             tipo_uso,
-            recomendaciones["Otro"]
+            datos["Otro"]
         )
     )
 
@@ -765,8 +988,9 @@ def obtener_recomendaciones(
             0,
             (
                 "🚨 Atención prioritaria",
-                "El valor calculado se encuentra en el nivel alto "
-                "según los criterios referenciales del prototipo."
+                "El resultado se encuentra en el nivel alto "
+                "de acuerdo con los criterios referenciales "
+                "implementados en el prototipo."
             )
         )
 
@@ -774,130 +998,513 @@ def obtener_recomendaciones(
 
 
 # ============================================================
-# 9. REPORTES
+# 9. GENERADOR DE PDF
 # ============================================================
 
-def crear_reporte_texto(
+def crear_pdf(
     fila,
     historial
 ):
 
-    codigo = fila["Código"]
+    buffer = BytesIO()
 
-    variacion = variacion_ultimo_periodo(
+    documento = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=45,
+        leftMargin=45,
+        topMargin=45,
+        bottomMargin=45
+    )
+
+    estilos = getSampleStyleSheet()
+
+    titulo = ParagraphStyle(
+        "TituloAqua",
+        parent=estilos["Title"],
+        alignment=TA_CENTER,
+        fontSize=22,
+        leading=26,
+        textColor=colors.HexColor(
+            "#075A8F"
+        ),
+        spaceAfter=8
+    )
+
+    subtitulo = ParagraphStyle(
+        "SubtituloAqua",
+        parent=estilos["Normal"],
+        alignment=TA_CENTER,
+        fontSize=11,
+        leading=15,
+        textColor=colors.HexColor(
+            "#4A6B7C"
+        ),
+        spaceAfter=18
+    )
+
+    seccion = ParagraphStyle(
+        "SeccionAqua",
+        parent=estilos["Heading2"],
+        fontSize=13,
+        leading=16,
+        textColor=colors.HexColor(
+            "#075A8F"
+        ),
+        spaceBefore=10,
+        spaceAfter=8
+    )
+
+    texto = ParagraphStyle(
+        "TextoAqua",
+        parent=estilos["BodyText"],
+        fontSize=10,
+        leading=15,
+        textColor=colors.HexColor(
+            "#273F4B"
+        )
+    )
+
+    elementos = []
+
+    elementos.append(
+        Paragraph(
+            "AquaLog BI",
+            titulo
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "Reporte de análisis del consumo de agua",
+            subtitulo
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "Inteligencia matemática para la gestión eficiente del agua",
+            subtitulo
+        )
+    )
+
+    elementos.append(
+        Spacer(
+            1,
+            10
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "1. Identificación",
+            seccion
+        )
+    )
+
+    tabla_identificacion = [
+        ["Código", str(fila["Código"])],
+        ["Fecha", str(fila["Fecha"])],
+        [
+            "Sector / comunidad",
+            str(fila["Sector / comunidad"])
+        ],
+        [
+            "Zona / referencia",
+            str(fila["Zona / referencia"])
+        ],
+        [
+            "Tipo de uso",
+            str(fila["Tipo de uso"])
+        ]
+    ]
+
+    tabla = Table(
+        tabla_identificacion,
+        colWidths=[
+            150,
+            340
+        ]
+    )
+
+    tabla.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.HexColor("#EAF7FD")
+                ),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, -1),
+                    colors.HexColor("#203A49")
+                ),
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (0, -1),
+                    "Helvetica-Bold"
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.HexColor("#C8DFEA")
+                ),
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "MIDDLE"
+                ),
+                (
+                    "PADDING",
+                    (0, 0),
+                    (-1, -1),
+                    7
+                )
+            ]
+        )
+    )
+
+    elementos.append(tabla)
+
+    elementos.append(
+        Spacer(
+            1,
+            14
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "2. Datos registrados",
+            seccion
+        )
+    )
+
+    datos_registrados = [
+        [
+            "Personas o unidades de referencia",
+            str(fila["Personas"])
+        ],
+        [
+            "Consumo del periodo",
+            f'{fila["Consumo del periodo (m³)"]:.2f} m³'
+        ],
+        [
+            "Duración del periodo",
+            f'{fila["Días"]} días'
+        ],
+        [
+            "Tarifa",
+            f'S/ {fila["Tarifa (S/ por m³)"]:.2f} por m³'
+        ]
+    ]
+
+    tabla2 = Table(
+        datos_registrados,
+        colWidths=[
+            220,
+            270
+        ]
+    )
+
+    tabla2.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.HexColor("#F1F8FB")
+                ),
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (0, -1),
+                    "Helvetica-Bold"
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.HexColor("#C8DFEA")
+                ),
+                (
+                    "PADDING",
+                    (0, 0),
+                    (-1, -1),
+                    7
+                )
+            ]
+        )
+    )
+
+    elementos.append(
+        tabla2
+    )
+
+    elementos.append(
+        Paragraph(
+            "3. Resultados matemáticos",
+            seccion
+        )
+    )
+
+    resultados = [
+        [
+            "Consumo diario",
+            f'{fila["Consumo diario (m³)"]:.4f} m³/día'
+        ],
+        [
+            "Consumo individual de referencia",
+            f'{fila["Consumo por persona (L/día)"]:.2f} L/día'
+        ],
+        [
+            "Índice logarítmico",
+            f'{fila["Índice logarítmico"]:.6f}'
+        ],
+        [
+            "Clasificación",
+            str(fila["Nivel"])
+        ],
+        [
+            "Costo estimado",
+            f'S/ {fila["Costo del periodo (S/)"]:.2f}'
+        ]
+    ]
+
+    tabla3 = Table(
+        resultados,
+        colWidths=[
+            220,
+            270
+        ]
+    )
+
+    tabla3.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.HexColor("#EAF7FD")
+                ),
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (0, -1),
+                    "Helvetica-Bold"
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.HexColor("#C8DFEA")
+                ),
+                (
+                    "PADDING",
+                    (0, 0),
+                    (-1, -1),
+                    7
+                )
+            ]
+        )
+    )
+
+    elementos.append(
+        tabla3
+    )
+
+    elementos.append(
+        Paragraph(
+            "4. Modelo matemático",
+            seccion
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "Consumo unitario diario: "
+            "Cₚ = V / (P × D)",
+            texto
+        )
+    )
+
+    elementos.append(
+        Spacer(
+            1,
+            5
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "Índice logarítmico: "
+            "Iₗ = log10(1 + Cₚ)",
+            texto
+        )
+    )
+
+    variacion = calcular_variacion(
         historial
     )
 
-    tendencia = tendencia_consumo(
+    tendencia = calcular_tendencia(
         historial
+    )
+
+    elementos.append(
+        Paragraph(
+            "5. Análisis histórico",
+            seccion
+        )
     )
 
     if variacion is None:
+
         texto_variacion = (
-            "No disponible"
+            "No existe información suficiente "
+            "para comparar con un periodo anterior."
         )
+
+    elif variacion > 0:
+
+        texto_variacion = (
+            f"El consumo aumentó "
+            f"{variacion:.2f}% respecto "
+            f"al periodo anterior."
+        )
+
+    elif variacion < 0:
+
+        texto_variacion = (
+            f"El consumo disminuyó "
+            f"{abs(variacion):.2f}% respecto "
+            f"al periodo anterior."
+        )
+
     else:
+
         texto_variacion = (
-            f"{variacion:+.2f}%"
+            "El consumo no presentó variación "
+            "respecto al periodo anterior."
         )
 
-    contenido = f"""
-AQUALOG BI
-REPORTE DE ANÁLISIS DEL CONSUMO DE AGUA
+    elementos.append(
+        Paragraph(
+            texto_variacion,
+            texto
+        )
+    )
 
-Fecha de generación:
-{datetime.now().strftime("%d/%m/%Y %H:%M")}
+    elementos.append(
+        Spacer(
+            1,
+            7
+        )
+    )
 
---------------------------------------------------
-IDENTIFICACIÓN
---------------------------------------------------
+    elementos.append(
+        Paragraph(
+            f"Tendencia reciente: "
+            f"<b>{tendencia}</b>",
+            texto
+        )
+    )
 
-Código:
-{fila["Código"]}
+    elementos.append(
+        Paragraph(
+            "6. Recomendaciones",
+            seccion
+        )
+    )
 
-Fecha del registro:
-{fila["Fecha"]}
+    recomendaciones = obtener_recomendaciones(
+        fila["Tipo de uso"],
+        fila["Nivel"]
+    )
 
-Sector / comunidad:
-{fila["Sector / comunidad"]}
+    for titulo_rec, texto_rec in recomendaciones:
 
-Zona / referencia:
-{fila["Zona / referencia"]}
+        elementos.append(
+            Paragraph(
+                f"<b>{titulo_rec}</b>: "
+                f"{texto_rec}",
+                texto
+            )
+        )
 
-Tipo de uso:
-{fila["Tipo de uso"]}
+        elementos.append(
+            Spacer(
+                1,
+                5
+            )
+        )
 
---------------------------------------------------
-DATOS REGISTRADOS
---------------------------------------------------
+    elementos.append(
+        Paragraph(
+            "7. Observaciones",
+            seccion
+        )
+    )
 
-Personas o unidades de referencia:
-{fila["Personas"]}
+    observacion = str(
+        fila["Observaciones"]
+    ).strip()
 
-Consumo del periodo:
-{fila["Consumo del periodo (m³)"]:.2f} m³
+    if not observacion:
+        observacion = (
+            "No se registraron observaciones."
+        )
 
-Días del periodo:
-{fila["Días"]}
+    elementos.append(
+        Paragraph(
+            observacion,
+            texto
+        )
+    )
 
-Tarifa:
-S/ {fila["Tarifa (S/ por m³)"]:.2f} por m³
+    elementos.append(
+        Spacer(
+            1,
+            25
+        )
+    )
 
---------------------------------------------------
-RESULTADOS
---------------------------------------------------
+    elementos.append(
+        Paragraph(
+            "AquaLog BI · Baños del Inca · Cajamarca · 2026",
+            subtitulo
+        )
+    )
 
-Consumo diario:
-{fila["Consumo diario (m³)"]:.4f} m³/día
+    documento.build(
+        elementos
+    )
 
-Consumo individual de referencia:
-{fila["Consumo por persona (L/día)"]:.2f} L/día
+    buffer.seek(0)
 
-Índice logarítmico:
-{fila["Índice logarítmico"]:.5f}
-
-Nivel:
-{fila["Nivel"]}
-
-Costo estimado:
-S/ {fila["Costo del periodo (S/)"]:.2f}
-
---------------------------------------------------
-ANÁLISIS HISTÓRICO
---------------------------------------------------
-
-Número de registros:
-{len(historial)}
-
-Variación frente al periodo anterior:
-{texto_variacion}
-
-Tendencia reciente:
-{tendencia}
-
---------------------------------------------------
-OBSERVACIONES
---------------------------------------------------
-
-{fila["Observaciones"]}
-
---------------------------------------------------
-
-AquaLog BI
-Inteligencia matemática para la gestión eficiente del agua
-Baños del Inca - Cajamarca - 2026
-"""
-
-    return contenido.strip()
+    return buffer.getvalue()
 
 
 # ============================================================
-# 10. INICIO DE SESIÓN
+# 10. ESTADO DE LA APLICACIÓN
 # ============================================================
 
 if "df" not in st.session_state:
 
-    st.session_state.df = cargar_datos()
+    st.session_state.df = (
+        cargar_datos()
+    )
 
 df = normalizar_df(
     st.session_state.df
@@ -910,7 +1517,9 @@ df = normalizar_df(
 
 with st.sidebar:
 
-    st.title("💧 AquaLog BI")
+    st.title(
+        "💧 AquaLog BI"
+    )
 
     st.caption(
         "Gestión inteligente del agua"
@@ -930,7 +1539,7 @@ with st.sidebar:
             "🚨 Alertas",
             "💡 Recomendaciones",
             "🧮 Motor matemático",
-            "📄 Reportes",
+            "📄 Reportes PDF",
             "ℹ️ Proyecto"
         ]
     )
@@ -938,9 +1547,8 @@ with st.sidebar:
     st.divider()
 
     st.caption(
-        "AquaLog BI es un sistema general "
-        "adaptable a distintos tipos de uso, "
-        "sectores y contextos."
+        "Sistema adaptable a distintos "
+        "sectores, comunidades y tipos de uso."
     )
 
 
@@ -961,22 +1569,26 @@ if opcion == "🏠 Centro de control":
 
         card(
             "AquaLog BI está listo",
-            "Aún no existen registros. "
-            "Ingresa el primer consumo desde "
+            "Todavía no existen registros. "
+            "Ingresa el primero desde "
             "<b>Nuevo registro</b>.",
             "🚀"
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = (
+            st.columns(4)
+        )
 
         with c1:
+
             card(
                 "Medir",
-                "Registra el consumo.",
+                "Registra información.",
                 "💧"
             )
 
         with c2:
+
             card(
                 "Analizar",
                 "Obtén indicadores.",
@@ -984,80 +1596,92 @@ if opcion == "🏠 Centro de control":
             )
 
         with c3:
+
             card(
                 "Comparar",
-                "Observa cambios históricos.",
+                "Estudia cambios.",
                 "📈"
             )
 
         with c4:
+
             card(
                 "Decidir",
-                "Simula y proyecta mejoras.",
+                "Proyecta mejoras.",
                 "🎯"
             )
 
     else:
 
-        total_consumo = df[
-            "Consumo del periodo (m³)"
-        ].sum()
-
-        promedio = df[
-            "Consumo del periodo (m³)"
-        ].mean()
-
-        codigos = df[
-            "Código"
-        ].nunique()
-
-        costo_total = df[
-            "Costo del periodo (S/)"
-        ].sum()
-
-        alertas = generar_alertas(
-            df
+        consumo_total = (
+            df[
+                "Consumo del periodo (m³)"
+            ].sum()
         )
 
-        incrementos = sum(
-            1
-            for alerta in alertas
-            if alerta["tipo"] == "rojo"
+        promedio = (
+            df[
+                "Consumo del periodo (m³)"
+            ].mean()
         )
 
-        reducciones = sum(
-            1
-            for alerta in alertas
-            if alerta["tipo"] == "verde"
+        puntos = (
+            df["Código"]
+            .astype(str)
+            .nunique()
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        costo = (
+            df[
+                "Costo del periodo (S/)"
+            ].sum()
+        )
+
+        c1, c2, c3, c4 = (
+            st.columns(4)
+        )
 
         c1.metric(
             "💧 Consumo acumulado",
-            f"{total_consumo:.2f} m³"
+            f"{consumo_total:.2f} m³"
         )
 
         c2.metric(
-            "📊 Promedio por registro",
+            "📊 Promedio",
             f"{promedio:.2f} m³"
         )
 
         c3.metric(
             "🆔 Puntos registrados",
-            codigos
+            puntos
         )
 
         c4.metric(
             "💰 Costo acumulado",
-            f"S/ {costo_total:.2f}"
+            f"S/ {costo:.2f}"
         )
 
-        c1, c2 = st.columns(2)
+        alertas = generar_alertas(
+            df
+        )
+
+        aumentos = sum(
+            alerta["tipo"] == "rojo"
+            for alerta in alertas
+        )
+
+        reducciones = sum(
+            alerta["tipo"] == "verde"
+            for alerta in alertas
+        )
+
+        c1, c2 = (
+            st.columns(2)
+        )
 
         c1.metric(
-            "📈 Aumentos importantes",
-            incrementos
+            "📈 Incrementos importantes",
+            aumentos
         )
 
         c2.metric(
@@ -1066,7 +1690,7 @@ if opcion == "🏠 Centro de control":
         )
 
         st.subheader(
-            "🚨 Centro de alertas"
+            "🚨 Resumen de alertas"
         )
 
         if not alertas:
@@ -1078,9 +1702,9 @@ if opcion == "🏠 Centro de control":
 
         else:
 
-            for alerta in alertas[:8]:
+            for alerta in alertas[:6]:
 
-                alerta_html(
+                mostrar_alerta(
                     alerta["tipo"],
                     alerta["titulo"],
                     alerta["texto"]
@@ -1090,7 +1714,7 @@ if opcion == "🏠 Centro de control":
             "📊 Consumo por tipo de uso"
         )
 
-        resumen_tipo = (
+        consumo_tipo = (
             df.groupby(
                 "Tipo de uso"
             )[
@@ -1103,19 +1727,19 @@ if opcion == "🏠 Centro de control":
         )
 
         st.bar_chart(
-            resumen_tipo
+            consumo_tipo
         )
 
         st.subheader(
-            "📍 Consumo por sector o comunidad"
+            "📍 Consumo por sector/comunidad"
         )
 
-        temp_sector = df.copy()
+        sectores_df = df.copy()
 
-        temp_sector[
+        sectores_df[
             "Sector / comunidad"
         ] = (
-            temp_sector[
+            sectores_df[
                 "Sector / comunidad"
             ]
             .replace(
@@ -1124,8 +1748,8 @@ if opcion == "🏠 Centro de control":
             )
         )
 
-        resumen_sector = (
-            temp_sector.groupby(
+        consumo_sector = (
+            sectores_df.groupby(
                 "Sector / comunidad"
             )[
                 "Consumo del periodo (m³)"
@@ -1138,14 +1762,14 @@ if opcion == "🏠 Centro de control":
         )
 
         st.bar_chart(
-            resumen_sector
+            consumo_sector
         )
 
         st.subheader(
             "🏆 Mayores consumos"
         )
 
-        top = (
+        ranking = (
             df.sort_values(
                 "Consumo del periodo (m³)",
                 ascending=False
@@ -1164,7 +1788,7 @@ if opcion == "🏠 Centro de control":
         )
 
         st.dataframe(
-            top,
+            ranking,
             use_container_width=True,
             hide_index=True
         )
@@ -1181,15 +1805,17 @@ elif opcion == "➕ Nuevo registro":
     )
 
     st.caption(
-        "Los registros pueden repetirse "
-        "para un mismo código en diferentes fechas."
+        "Un mismo código puede tener diferentes "
+        "registros a lo largo del tiempo."
     )
 
     with st.form(
-        "nuevo_registro"
+        "registro"
     ):
 
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3 = (
+            st.columns(3)
+        )
 
         with c1:
 
@@ -1198,14 +1824,18 @@ elif opcion == "➕ Nuevo registro":
                 placeholder="Ejemplo: U001"
             )
 
-            fecha_registro = st.date_input(
-                "📅 Fecha",
-                value=date.today()
+            fecha_registro = (
+                st.date_input(
+                    "📅 Fecha",
+                    value=date.today()
+                )
             )
 
-            tipo_uso = st.selectbox(
-                "🏷️ Tipo de uso",
-                TIPOS_USO
+            tipo_uso = (
+                st.selectbox(
+                    "🏷️ Tipo de uso",
+                    TIPOS_USO
+                )
             )
 
         with c2:
@@ -1221,7 +1851,6 @@ elif opcion == "➕ Nuevo registro":
             personas = st.number_input(
                 "👥 Personas o unidades de referencia",
                 min_value=1,
-                max_value=100000,
                 value=4
             )
 
@@ -1252,33 +1881,35 @@ elif opcion == "➕ Nuevo registro":
             "📝 Observaciones"
         )
 
-        enviar = st.form_submit_button(
-            "💧 ANALIZAR Y GUARDAR",
-            use_container_width=True
+        guardar = (
+            st.form_submit_button(
+                "💧 ANALIZAR Y GUARDAR",
+                use_container_width=True
+            )
         )
 
-    if enviar:
+    if guardar:
 
         codigo = (
-            codigo
-            .strip()
-            .upper()
+            codigo.strip().upper()
         )
 
         if not codigo:
 
             st.error(
-                "Ingresa un código."
+                "Debes ingresar un código."
             )
 
         else:
 
-            resultado = analizar_consumo(
-                personas,
-                consumo,
-                dias,
-                tipo_uso,
-                tarifa
+            resultado = (
+                analizar_consumo(
+                    personas,
+                    consumo,
+                    dias,
+                    tipo_uso,
+                    tarifa
+                )
             )
 
             nuevo = pd.DataFrame(
@@ -1359,39 +1990,39 @@ elif opcion == "➕ Nuevo registro":
                 "✅ Registro guardado correctamente."
             )
 
-            r1, r2, r3, r4 = st.columns(4)
+            c1, c2, c3, c4 = (
+                st.columns(4)
+            )
 
-            r1.metric(
+            c1.metric(
                 "Consumo diario",
                 f'{resultado["consumo_diario"]:.3f} m³'
             )
 
-            r2.metric(
+            c2.metric(
                 "Consumo individual",
                 f'{resultado["litros_persona_dia"]:.1f} L/día'
             )
 
-            r3.metric(
+            c3.metric(
                 "Índice logarítmico",
-                f'{resultado["indice_log"]:.5f}'
+                f'{resultado["indice_log"]:.6f}'
             )
 
-            r4.metric(
-                "Costo",
+            c4.metric(
+                "Costo estimado",
                 f'S/ {resultado["costo"]:.2f}'
             )
 
             if tipo_uso == "Doméstico":
 
-                nivel = resultado["nivel"]
-
-                if nivel == "BAJO":
+                if resultado["nivel"] == "BAJO":
 
                     st.success(
                         "🟢 Nivel referencial: BAJO"
                     )
 
-                elif nivel == "MODERADO":
+                elif resultado["nivel"] == "MODERADO":
 
                     st.warning(
                         "🟡 Nivel referencial: MODERADO"
@@ -1407,44 +2038,40 @@ elif opcion == "➕ Nuevo registro":
 
                 st.info(
                     "Para usos no domésticos "
-                    "AquaLog BI presenta indicadores "
-                    "y análisis histórico sin aplicar "
-                    "clasificación doméstica."
+                    "el sistema analiza los indicadores "
+                    "sin aplicar la clasificación "
+                    "doméstica."
                 )
 
-            hist_actual = historial_codigo(
+            historial = historial_codigo(
                 st.session_state.df,
                 codigo
             )
 
-            if len(hist_actual) >= 2:
+            variacion = calcular_variacion(
+                historial
+            )
 
-                variacion = (
-                    variacion_ultimo_periodo(
-                        hist_actual
+            if variacion is not None:
+
+                if variacion > 0:
+
+                    st.warning(
+                        f"📈 El consumo aumentó "
+                        f"{variacion:.1f}% respecto "
+                        f"al registro anterior."
                     )
-                )
 
-                if variacion is not None:
+                elif variacion < 0:
 
-                    if variacion > 0:
-
-                        st.warning(
-                            f"📈 El consumo aumentó "
-                            f"{variacion:.1f}% respecto "
-                            f"al periodo anterior."
-                        )
-
-                    elif variacion < 0:
-
-                        st.success(
-                            f"📉 El consumo disminuyó "
-                            f"{abs(variacion):.1f}% respecto "
-                            f"al periodo anterior."
-                        )
+                    st.success(
+                        f"📉 El consumo disminuyó "
+                        f"{abs(variacion):.1f}% respecto "
+                        f"al registro anterior."
+                    )
 
             with st.expander(
-                "🧮 Ver cálculo matemático"
+                "🧮 Ver desarrollo matemático"
             ):
 
                 st.latex(
@@ -1453,8 +2080,12 @@ elif opcion == "➕ Nuevo registro":
 
                 st.write(
                     f"Cₚ = {consumo:.2f} / "
-                    f"({personas} × {dias}) "
-                    f"= {resultado['cp']:.6f} "
+                    f"({personas} × {dias})"
+                )
+
+                st.write(
+                    f"Cₚ = "
+                    f"{resultado['cp']:.6f} "
                     f"m³/unidad/día"
                 )
 
@@ -1487,7 +2118,9 @@ elif opcion == "👤 Ficha individual":
     else:
 
         codigos = sorted(
-            df["Código"]
+            df[
+                "Código"
+            ]
             .astype(str)
             .unique()
             .tolist()
@@ -1498,32 +2131,28 @@ elif opcion == "👤 Ficha individual":
             codigos
         )
 
-        hist = historial_codigo(
+        historial = historial_codigo(
             df,
             codigo
         )
 
-        ultimo = hist.iloc[-1]
+        ultimo = historial.iloc[-1]
 
-        variacion = (
-            variacion_ultimo_periodo(
-                hist
-            )
+        variacion = calcular_variacion(
+            historial
         )
 
-        tendencia = tendencia_consumo(
-            hist
+        tendencia = calcular_tendencia(
+            historial
         )
 
-        st.subheader(
-            f"Resumen de {codigo}"
+        c1, c2, c3, c4 = (
+            st.columns(4)
         )
-
-        c1, c2, c3, c4 = st.columns(4)
 
         c1.metric(
             "Registros",
-            len(hist)
+            len(historial)
         )
 
         c2.metric(
@@ -1533,7 +2162,7 @@ elif opcion == "👤 Ficha individual":
 
         c3.metric(
             "Promedio",
-            f'{hist["Consumo del periodo (m³)"].mean():.2f} m³'
+            f'{historial["Consumo del periodo (m³)"].mean():.2f} m³'
         )
 
         if variacion is None:
@@ -1550,40 +2179,41 @@ elif opcion == "👤 Ficha individual":
                 f"{variacion:+.1f}%"
             )
 
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3 = (
+            st.columns(3)
+        )
 
         c1.metric(
-            "Máximo registrado",
-            f'{hist["Consumo del periodo (m³)"].max():.2f} m³'
+            "Máximo",
+            f'{historial["Consumo del periodo (m³)"].max():.2f} m³'
         )
 
         c2.metric(
-            "Mínimo registrado",
-            f'{hist["Consumo del periodo (m³)"].min():.2f} m³'
+            "Mínimo",
+            f'{historial["Consumo del periodo (m³)"].min():.2f} m³'
         )
 
         c3.metric(
-            "Tendencia reciente",
+            "Tendencia",
             tendencia
         )
 
         st.subheader(
-            "📈 Evolución"
+            "📈 Evolución histórica"
         )
 
-        grafico = hist[
+        grafico = historial[
             [
                 "Fecha_dt",
                 "Consumo del periodo (m³)"
             ]
-        ].copy()
-
-        grafico = grafico.dropna()
+        ].dropna()
 
         if not grafico.empty:
 
-            grafico = grafico.set_index(
-                "Fecha_dt"
+            grafico = (
+                grafico
+                .set_index("Fecha_dt")
             )
 
             st.line_chart(
@@ -1597,57 +2227,56 @@ elif opcion == "👤 Ficha individual":
         if variacion is None:
 
             st.info(
-                "Se necesita al menos un registro "
-                "anterior para realizar una comparación."
+                "Se necesita un segundo registro "
+                "para calcular variaciones."
             )
 
         elif variacion >= 20:
 
-            alerta_html(
+            mostrar_alerta(
                 "rojo",
-                "Aumento importante",
+                "Incremento importante",
                 f"El consumo aumentó "
                 f"{variacion:.1f}%."
             )
 
         elif variacion <= -10:
 
-            alerta_html(
+            mostrar_alerta(
                 "verde",
-                "Mejora detectada",
+                "Reducción detectada",
                 f"El consumo disminuyó "
                 f"{abs(variacion):.1f}%."
             )
 
         else:
 
-            alerta_html(
+            mostrar_alerta(
                 "amarillo",
                 "Variación moderada",
-                f"El cambio frente al periodo "
-                f"anterior fue de "
+                f"El cambio fue de "
                 f"{variacion:+.1f}%."
             )
 
         if tendencia == "CRECIENTE":
 
             st.warning(
-                "⚠️ Los últimos registros presentan "
-                "una tendencia creciente."
+                "⚠️ Los tres últimos registros "
+                "presentan una tendencia creciente."
             )
 
         elif tendencia == "DECRECIENTE":
 
             st.success(
-                "✅ Los últimos registros presentan "
-                "una tendencia decreciente."
+                "✅ Los tres últimos registros "
+                "presentan una tendencia decreciente."
             )
 
         st.subheader(
-            "📋 Historial"
+            "📋 Historial completo"
         )
 
-        mostrar = hist.drop(
+        mostrar = historial.drop(
             columns=["Fecha_dt"]
         )
 
@@ -1676,15 +2305,11 @@ elif opcion == "🔎 Explorador":
 
     else:
 
-        c1, c2, c3 = st.columns(3)
-
         sectores = sorted(
             [
                 x
                 for x in
-                df[
-                    "Sector / comunidad"
-                ]
+                df["Sector / comunidad"]
                 .astype(str)
                 .unique()
                 .tolist()
@@ -1706,25 +2331,35 @@ elif opcion == "🔎 Explorador":
             .tolist()
         )
 
+        c1, c2, c3 = (
+            st.columns(3)
+        )
+
         with c1:
 
-            filtro_sector = st.selectbox(
-                "Sector",
-                ["Todos"] + sectores
+            filtro_sector = (
+                st.selectbox(
+                    "📍 Sector",
+                    ["Todos"] + sectores
+                )
             )
 
         with c2:
 
-            filtro_tipo = st.selectbox(
-                "Tipo",
-                ["Todos"] + tipos
+            filtro_tipo = (
+                st.selectbox(
+                    "🏷️ Tipo de uso",
+                    ["Todos"] + tipos
+                )
             )
 
         with c3:
 
-            filtro_nivel = st.selectbox(
-                "Nivel",
-                ["Todos"] + niveles
+            filtro_nivel = (
+                st.selectbox(
+                    "🚦 Nivel",
+                    ["Todos"] + niveles
+                )
             )
 
         busqueda = st.text_input(
@@ -1760,8 +2395,7 @@ elif opcion == "🔎 Explorador":
         if busqueda.strip():
 
             palabra = (
-                busqueda
-                .strip()
+                busqueda.strip()
             )
 
             mascara = (
@@ -1790,12 +2424,12 @@ elif opcion == "🔎 Explorador":
                 )
             )
 
-            filtrado = filtrado[
-                mascara
-            ]
+            filtrado = (
+                filtrado[mascara]
+            )
 
         st.caption(
-            f"{len(filtrado)} registro(s)."
+            f"{len(filtrado)} registro(s) encontrados."
         )
 
         st.dataframe(
@@ -1804,14 +2438,14 @@ elif opcion == "🔎 Explorador":
             hide_index=True
         )
 
-        csv = filtrado.to_csv(
-            index=False
-        ).encode(
-            "utf-8-sig"
+        csv = (
+            filtrado
+            .to_csv(index=False)
+            .encode("utf-8-sig")
         )
 
         st.download_button(
-            "📥 Descargar datos filtrados",
+            "📥 DESCARGAR DATOS CSV",
             data=csv,
             file_name="AquaLog_BI_datos.csv",
             mime="text/csv",
@@ -1825,7 +2459,7 @@ elif opcion == "🔎 Explorador":
         )
 
         archivo = st.file_uploader(
-            "Selecciona un CSV",
+            "Selecciona un archivo CSV",
             type=["csv"]
         )
 
@@ -1840,12 +2474,12 @@ elif opcion == "🔎 Explorador":
                 )
 
                 st.success(
-                    f"{len(importado)} registros "
-                    f"detectados."
+                    f"Se detectaron "
+                    f"{len(importado)} registros."
                 )
 
                 if st.button(
-                    "USAR ESTA BASE",
+                    "✅ USAR ESTA BASE",
                     use_container_width=True
                 ):
 
@@ -1872,11 +2506,11 @@ elif opcion == "🔎 Explorador":
             "🗑️ Eliminar registro"
         )
 
-        borrar_df = (
+        temporal = (
             df.reset_index()
         )
 
-        opciones = borrar_df.apply(
+        opciones = temporal.apply(
             lambda fila:
                 f'{fila["index"]} | '
                 f'{fila["Código"]} | '
@@ -1885,7 +2519,7 @@ elif opcion == "🔎 Explorador":
             axis=1
         ).tolist()
 
-        seleccionar = st.selectbox(
+        seleccion = st.selectbox(
             "Selecciona el registro",
             ["Seleccionar..."] + opciones
         )
@@ -1895,16 +2529,16 @@ elif opcion == "🔎 Explorador":
             use_container_width=True
         ):
 
-            if seleccionar == "Seleccionar...":
+            if seleccion == "Seleccionar...":
 
                 st.warning(
-                    "Selecciona un registro."
+                    "Primero selecciona un registro."
                 )
 
             else:
 
                 indice = int(
-                    seleccionar.split(
+                    seleccion.split(
                         " | "
                     )[0]
                 )
@@ -1943,6 +2577,11 @@ elif opcion == "🎯 Simulador":
         "Simulador AquaLog"
     )
 
+    st.write(
+        "Explora escenarios hipotéticos "
+        "de reducción del consumo."
+    )
+
     tab1, tab2 = st.tabs(
         [
             "👤 Escenario individual",
@@ -1952,102 +2591,116 @@ elif opcion == "🎯 Simulador":
 
     with tab1:
 
-        consumo_base = st.number_input(
+        consumo_actual = st.number_input(
             "💧 Consumo actual por periodo (m³)",
             min_value=0.01,
             value=20.0,
             step=0.1,
-            key="sim_ind_consumo"
+            key="individual_consumo"
         )
 
-        tarifa_base = st.number_input(
+        tarifa_sim = st.number_input(
             "💰 Tarifa (S/ por m³)",
             min_value=0.0,
             value=0.0,
             step=0.1,
-            key="sim_ind_tarifa"
+            key="individual_tarifa"
         )
 
-        reduccion = st.slider(
+        meta = st.slider(
             "🎯 Meta de reducción",
             0,
             50,
             15,
             1,
             format="%d%%",
-            key="sim_ind_red"
+            key="individual_meta"
         )
 
-        nuevo = consumo_base * (
-            1 - reduccion / 100
+        consumo_proyectado = (
+            consumo_actual *
+            (1 - meta / 100)
         )
 
         ahorro = (
-            consumo_base - nuevo
+            consumo_actual -
+            consumo_proyectado
         )
 
-        ahorro_anual = (
+        ahorro_12_periodos = (
             ahorro * 12
         )
 
-        dinero = (
-            ahorro * tarifa_base
+        ahorro_dinero = (
+            ahorro *
+            tarifa_sim
         )
 
-        dinero_anual = (
-            dinero * 12
+        ahorro_dinero_12 = (
+            ahorro_dinero *
+            12
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = (
+            st.columns(4)
+        )
 
         c1.metric(
-            "Actual",
-            f"{consumo_base:.2f} m³"
+            "Consumo actual",
+            f"{consumo_actual:.2f} m³"
         )
 
         c2.metric(
-            "Proyectado",
-            f"{nuevo:.2f} m³"
+            "Consumo proyectado",
+            f"{consumo_proyectado:.2f} m³"
         )
 
         c3.metric(
-            "Ahorro/periodo",
+            "Ahorro por periodo",
             f"{ahorro:.2f} m³"
         )
 
         c4.metric(
-            "Ahorro anual",
-            f"{ahorro_anual:.2f} m³"
+            "Ahorro en 12 periodos",
+            f"{ahorro_12_periodos:.2f} m³"
         )
 
-        if tarifa_base > 0:
+        if tarifa_sim > 0:
 
             st.success(
                 f"💰 Ahorro económico estimado: "
-                f"S/ {dinero:.2f} por periodo "
-                f"y S/ {dinero_anual:.2f} al año."
+                f"S/ {ahorro_dinero:.2f} por periodo "
+                f"y S/ {ahorro_dinero_12:.2f} "
+                f"en 12 periodos."
             )
 
         escenarios = pd.Series(
             {
-                "Actual": consumo_base,
-                "Ahorro 5%":
-                    consumo_base * 0.95,
-                "Ahorro 10%":
-                    consumo_base * 0.90,
-                "Ahorro 15%":
-                    consumo_base * 0.85,
-                "Ahorro 20%":
-                    consumo_base * 0.80,
-                "Ahorro 25%":
-                    consumo_base * 0.75,
-                f"Meta {reduccion}%":
-                    nuevo
+                "Actual":
+                    consumo_actual,
+
+                "Reducción 5%":
+                    consumo_actual * 0.95,
+
+                "Reducción 10%":
+                    consumo_actual * 0.90,
+
+                "Reducción 15%":
+                    consumo_actual * 0.85,
+
+                "Reducción 20%":
+                    consumo_actual * 0.80,
+
+                "Reducción 25%":
+                    consumo_actual * 0.75,
+
+                f"Meta {meta}%":
+                    consumo_proyectado
             }
         )
 
         st.subheader(
-            "📊 Comparación"
+            "📊 Comparación de escenarios"
         )
 
         st.bar_chart(
@@ -2060,80 +2713,79 @@ elif opcion == "🎯 Simulador":
             "Proyección colectiva"
         )
 
-        unidades = st.number_input(
-            "👥 Número de unidades, usuarios o puntos",
+        cantidad = st.number_input(
+            "🔢 Número de unidades o puntos",
             min_value=1,
-            value=10,
-            key="colectivo_unidades"
+            value=10
         )
 
         consumo_promedio = st.number_input(
             "💧 Consumo promedio por unidad (m³)",
             min_value=0.01,
             value=18.0,
-            step=0.1,
-            key="colectivo_consumo"
+            step=0.1
         )
 
-        reduccion_colectiva = st.slider(
+        meta_colectiva = st.slider(
             "🎯 Meta colectiva",
             0,
             50,
             15,
             1,
-            format="%d%%",
-            key="colectivo_reduccion"
+            format="%d%%"
         )
 
-        consumo_actual_total = (
-            unidades *
+        actual_total = (
+            cantidad *
             consumo_promedio
         )
 
         ahorro_total = (
-            consumo_actual_total *
-            reduccion_colectiva /
+            actual_total *
+            meta_colectiva /
             100
         )
 
-        consumo_nuevo_total = (
-            consumo_actual_total -
+        proyectado_total = (
+            actual_total -
             ahorro_total
         )
 
-        ahorro_anual_total = (
-            ahorro_total * 12
+        ahorro_12 = (
+            ahorro_total *
+            12
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = (
+            st.columns(4)
+        )
 
         c1.metric(
             "Consumo colectivo",
-            f"{consumo_actual_total:.2f} m³"
+            f"{actual_total:.2f} m³"
         )
 
         c2.metric(
-            "Nuevo escenario",
-            f"{consumo_nuevo_total:.2f} m³"
+            "Escenario proyectado",
+            f"{proyectado_total:.2f} m³"
         )
 
         c3.metric(
-            "Ahorro/periodo",
+            "Ahorro por periodo",
             f"{ahorro_total:.2f} m³"
         )
 
         c4.metric(
-            "Ahorro anual",
-            f"{ahorro_anual_total:.2f} m³"
+            "Ahorro en 12 periodos",
+            f"{ahorro_12:.2f} m³"
         )
 
         st.info(
-            f"Si {unidades} unidades reducen "
-            f"su consumo en "
-            f"{reduccion_colectiva}%, "
-            f"el ahorro proyectado es de "
-            f"{ahorro_anual_total:.2f} m³ "
-            f"en doce periodos equivalentes."
+            f"Con una reducción del "
+            f"{meta_colectiva}% aplicada a "
+            f"{cantidad} unidades, "
+            f"el ahorro proyectado sería "
+            f"{ahorro_total:.2f} m³ por periodo."
         )
 
 
@@ -2150,15 +2802,14 @@ elif opcion == "📈 Análisis":
     if df.empty:
 
         st.info(
-            "No existen registros."
+            "No existen datos disponibles."
         )
 
     else:
 
-        c1, c2 = st.columns(2)
-
         tipos = sorted(
             df["Tipo de uso"]
+            .astype(str)
             .unique()
             .tolist()
         )
@@ -2167,9 +2818,7 @@ elif opcion == "📈 Análisis":
             [
                 x
                 for x in
-                df[
-                    "Sector / comunidad"
-                ]
+                df["Sector / comunidad"]
                 .astype(str)
                 .unique()
                 .tolist()
@@ -2177,10 +2826,14 @@ elif opcion == "📈 Análisis":
             ]
         )
 
+        c1, c2 = (
+            st.columns(2)
+        )
+
         with c1:
 
             tipos_sel = st.multiselect(
-                "Tipos de uso",
+                "🏷️ Tipos de uso",
                 tipos,
                 default=tipos
             )
@@ -2188,16 +2841,14 @@ elif opcion == "📈 Análisis":
         with c2:
 
             sectores_sel = st.multiselect(
-                "Sectores",
+                "📍 Sectores",
                 sectores,
                 default=sectores
             )
 
         analisis = df[
             df["Tipo de uso"]
-            .isin(
-                tipos_sel
-            )
+            .isin(tipos_sel)
         ].copy()
 
         if sectores and sectores_sel:
@@ -2205,22 +2856,21 @@ elif opcion == "📈 Análisis":
             analisis = analisis[
                 analisis[
                     "Sector / comunidad"
-                ]
-                .isin(
-                    sectores_sel
-                )
+                ].isin(sectores_sel)
             ]
 
         if analisis.empty:
 
             st.warning(
-                "No existen resultados "
-                "para los filtros seleccionados."
+                "No existen datos para "
+                "los filtros seleccionados."
             )
 
         else:
 
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3, c4 = (
+                st.columns(4)
+            )
 
             c1.metric(
                 "Registros",
@@ -2243,7 +2893,7 @@ elif opcion == "📈 Análisis":
             )
 
             st.subheader(
-                "📊 Distribución por tipo"
+                "📊 Consumo por tipo de uso"
             )
 
             por_tipo = (
@@ -2263,17 +2913,15 @@ elif opcion == "📈 Análisis":
             )
 
             st.subheader(
-                "📍 Distribución territorial"
+                "📍 Consumo por sector"
             )
 
-            sector_temp = (
-                analisis.copy()
-            )
+            temp = analisis.copy()
 
-            sector_temp[
+            temp[
                 "Sector / comunidad"
             ] = (
-                sector_temp[
+                temp[
                     "Sector / comunidad"
                 ]
                 .replace(
@@ -2283,7 +2931,7 @@ elif opcion == "📈 Análisis":
             )
 
             por_sector = (
-                sector_temp.groupby(
+                temp.groupby(
                     "Sector / comunidad"
                 )[
                     "Consumo del periodo (m³)"
@@ -2302,24 +2950,21 @@ elif opcion == "📈 Análisis":
                 "🗓️ Evolución temporal"
             )
 
-            evolucion = (
-                analisis.copy()
-            )
+            temporal = analisis.copy()
 
-            evolucion["Fecha"] = (
+            temporal["Fecha"] = (
                 pd.to_datetime(
-                    evolucion["Fecha"],
+                    temporal["Fecha"],
                     errors="coerce"
                 )
             )
 
             evolucion = (
-                evolucion.dropna(
+                temporal.dropna(
                     subset=["Fecha"]
                 )
-                .groupby(
-                    "Fecha"
-                )[
+                .groupby("Fecha")
+                [
                     "Consumo del periodo (m³)"
                 ]
                 .sum()
@@ -2331,7 +2976,7 @@ elif opcion == "📈 Análisis":
             )
 
             st.subheader(
-                "🏆 Ranking"
+                "🏆 Ranking de consumo"
             )
 
             ranking = (
@@ -2346,7 +2991,6 @@ elif opcion == "📈 Análisis":
                         "Sector / comunidad",
                         "Tipo de uso",
                         "Consumo del periodo (m³)",
-                        "Consumo por persona (L/día)",
                         "Nivel"
                     ]
                 ]
@@ -2398,16 +3042,15 @@ elif opcion == "🚨 Alertas":
 
             for alerta in alertas:
 
-                alerta_html(
+                mostrar_alerta(
                     alerta["tipo"],
                     alerta["titulo"],
                     alerta["texto"]
                 )
 
         st.caption(
-            "Las alertas comparativas utilizan "
-            "los registros históricos disponibles "
-            "para cada código."
+            "Las alertas se generan comparando "
+            "el historial disponible de cada código."
         )
 
 
@@ -2418,11 +3061,11 @@ elif opcion == "🚨 Alertas":
 elif opcion == "💡 Recomendaciones":
 
     st.title(
-        "Recomendaciones"
+        "Recomendaciones AquaLog"
     )
 
     tipo = st.selectbox(
-        "Tipo de uso",
+        "🏷️ Tipo de uso",
         TIPOS_USO
     )
 
@@ -2431,7 +3074,7 @@ elif opcion == "💡 Recomendaciones":
     if tipo == "Doméstico":
 
         nivel = st.selectbox(
-            "Nivel",
+            "🚦 Nivel",
             [
                 "BAJO",
                 "MODERADO",
@@ -2446,11 +3089,11 @@ elif opcion == "💡 Recomendaciones":
         )
     )
 
-    for titulo, texto in recomendaciones:
+    for titulo_rec, texto_rec in recomendaciones:
 
         tip(
-            titulo,
-            texto
+            titulo_rec,
+            texto_rec
         )
 
 
@@ -2465,11 +3108,11 @@ elif opcion == "🧮 Motor matemático":
     )
 
     card(
-        "Etapa 1 — Medición",
-        "El sistema recibe el volumen consumido, "
+        "1. Datos",
+        "AquaLog BI recibe el volumen de agua, "
         "el número de unidades de referencia "
-        "y los días correspondientes al periodo.",
-        "1️⃣"
+        "y la duración del periodo.",
+        "📥"
     )
 
     st.latex(
@@ -2477,26 +3120,26 @@ elif opcion == "🧮 Motor matemático":
     )
 
     st.write(
-        "**V:** volumen consumido en m³."
+        "**V** = volumen consumido en m³."
     )
 
     st.write(
-        "**P:** personas o unidades de referencia."
+        "**P** = personas o unidades de referencia."
     )
 
     st.write(
-        "**D:** duración del periodo en días."
+        "**D** = días del periodo."
     )
 
     st.write(
-        "**Cₚ:** consumo unitario diario."
+        "**Cₚ** = consumo unitario diario."
     )
 
     card(
-        "Etapa 2 — Transformación logarítmica",
-        "AquaLog BI transforma el indicador "
-        "mediante una función logarítmica.",
-        "2️⃣"
+        "2. Transformación logarítmica",
+        "El indicador calculado pasa por "
+        "una transformación logarítmica.",
+        "🧮"
     )
 
     st.latex(
@@ -2504,36 +3147,49 @@ elif opcion == "🧮 Motor matemático":
     )
 
     st.info(
-        "El término +1 permite aplicar "
-        "la transformación cuando el consumo "
-        "se aproxima a cero."
+        "La transformación permite representar "
+        "el indicador en una escala logarítmica."
     )
 
     card(
-        "Etapa 3 — Interpretación",
-        "Los resultados obtenidos pueden compararse "
-        "entre registros y periodos para identificar "
-        "cambios y tendencias.",
-        "3️⃣"
+        "3. Comparación histórica",
+        "Los nuevos resultados pueden compararse "
+        "con los registros anteriores del mismo código.",
+        "📈"
+    )
+
+    st.latex(
+        r"\Delta C(\%)="
+        r"\frac{C_{actual}-C_{anterior}}{C_{anterior}}"
+        r"\times100"
+    )
+
+    card(
+        "4. Interpretación",
+        "AquaLog BI integra resultados matemáticos, "
+        "variaciones y tendencias para facilitar "
+        "la interpretación de los registros.",
+        "🔍"
     )
 
     st.warning(
         "Las categorías domésticas BAJO, MODERADO "
-        "y ALTO forman parte de los criterios "
-        "referenciales del prototipo. "
-        "Deben estar sustentadas metodológicamente "
-        "en el informe de investigación."
+        "y ALTO son criterios referenciales del prototipo "
+        "y deben estar debidamente sustentadas "
+        "en la investigación."
     )
 
     st.subheader(
         "🧪 Laboratorio matemático"
     )
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = (
+        st.columns(3)
+    )
 
     with c1:
 
-        volumen = st.number_input(
+        volumen_demo = st.number_input(
             "V — Volumen (m³)",
             min_value=0.01,
             value=18.0
@@ -2541,7 +3197,7 @@ elif opcion == "🧮 Motor matemático":
 
     with c2:
 
-        personas = st.number_input(
+        unidades_demo = st.number_input(
             "P — Unidades",
             min_value=1,
             value=4
@@ -2549,66 +3205,74 @@ elif opcion == "🧮 Motor matemático":
 
     with c3:
 
-        dias = st.number_input(
+        dias_demo = st.number_input(
             "D — Días",
             min_value=1,
             value=30
         )
 
-    cp = (
-        volumen /
+    cp_demo = (
+        volumen_demo /
         (
-            personas *
-            dias
+            unidades_demo *
+            dias_demo
         )
     )
 
-    il = math.log10(
-        1 + cp
+    il_demo = math.log10(
+        1 + cp_demo
     )
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = (
+        st.columns(3)
+    )
 
     c1.metric(
         "Cₚ",
-        f"{cp:.6f} m³/unidad/día"
+        f"{cp_demo:.6f} m³/unidad/día"
     )
 
     c2.metric(
         "Equivalencia",
-        f"{cp * 1000:.2f} L/unidad/día"
+        f"{cp_demo * 1000:.2f} L/unidad/día"
     )
 
     c3.metric(
-        "Iₗ",
-        f"{il:.6f}"
+        "Índice Iₗ",
+        f"{il_demo:.6f}"
     )
 
     st.subheader(
-        "🔄 Flujo del sistema"
+        "🔄 Arquitectura conceptual"
     )
 
     st.success(
         "DATOS → PROCESAMIENTO → "
         "MODELO MATEMÁTICO → INDICADORES → "
-        "INTERPRETACIÓN → DECISIÓN"
+        "COMPARACIÓN → INTERPRETACIÓN → DECISIÓN"
     )
 
 
 # ============================================================
-# 21. REPORTES
+# 21. REPORTES PDF
 # ============================================================
 
-elif opcion == "📄 Reportes":
+elif opcion == "📄 Reportes PDF":
 
     st.title(
-        "Reportes AquaLog"
+        "Reportes PDF"
+    )
+
+    st.write(
+        "Genera un reporte profesional "
+        "a partir del último registro "
+        "y del historial de un código."
     )
 
     if df.empty:
 
         st.info(
-            "No existen registros."
+            "Primero debes registrar información."
         )
 
     else:
@@ -2623,22 +3287,32 @@ elif opcion == "📄 Reportes":
         )
 
         codigo = st.selectbox(
-            "Selecciona un código",
+            "🆔 Selecciona un código",
             codigos
         )
 
-        hist = historial_codigo(
+        historial = historial_codigo(
             df,
             codigo
         )
 
-        fila = hist.iloc[-1]
+        ultimo = historial.iloc[-1]
+
+        variacion = calcular_variacion(
+            historial
+        )
+
+        tendencia = calcular_tendencia(
+            historial
+        )
 
         st.subheader(
             "Vista previa"
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = (
+            st.columns(4)
+        )
 
         c1.metric(
             "Código",
@@ -2647,43 +3321,74 @@ elif opcion == "📄 Reportes":
 
         c2.metric(
             "Último consumo",
-            f'{fila["Consumo del periodo (m³)"]:.2f} m³'
+            f'{ultimo["Consumo del periodo (m³)"]:.2f} m³'
         )
 
         c3.metric(
             "Índice",
-            f'{fila["Índice logarítmico"]:.5f}'
+            f'{ultimo["Índice logarítmico"]:.6f}'
         )
 
         c4.metric(
             "Nivel",
-            fila["Nivel"]
+            ultimo["Nivel"]
         )
 
-        reporte = crear_reporte_texto(
-            fila,
-            hist
+        st.write(
+            f"**Sector / comunidad:** "
+            f"{ultimo['Sector / comunidad']}"
         )
 
-        st.text_area(
-            "Contenido del reporte",
-            reporte,
-            height=420
+        st.write(
+            f"**Tipo de uso:** "
+            f"{ultimo['Tipo de uso']}"
+        )
+
+        if variacion is None:
+
+            st.info(
+                "No existe un registro anterior "
+                "para calcular la variación."
+            )
+
+        elif variacion > 0:
+
+            st.warning(
+                f"📈 Variación respecto "
+                f"al periodo anterior: "
+                f"+{variacion:.2f}%"
+            )
+
+        elif variacion < 0:
+
+            st.success(
+                f"📉 Variación respecto "
+                f"al periodo anterior: "
+                f"{variacion:.2f}%"
+            )
+
+        st.write(
+            f"**Tendencia reciente:** "
+            f"{tendencia}"
+        )
+
+        pdf = crear_pdf(
+            ultimo,
+            historial
         )
 
         st.download_button(
-            "📥 DESCARGAR REPORTE",
-            data=reporte.encode(
-                "utf-8"
-            ),
+            "📄 DESCARGAR REPORTE PDF",
+            data=pdf,
             file_name=
-                f"AquaLog_Reporte_{codigo}.txt",
-            mime="text/plain",
+                f"AquaLog_BI_{codigo}.pdf",
+            mime="application/pdf",
             use_container_width=True
         )
 
-        csv_historial = (
-            hist.drop(
+        historial_csv = (
+            historial
+            .drop(
                 columns=["Fecha_dt"]
             )
             .to_csv(
@@ -2696,7 +3401,7 @@ elif opcion == "📄 Reportes":
 
         st.download_button(
             "📊 DESCARGAR HISTORIAL CSV",
-            data=csv_historial,
+            data=historial_csv,
             file_name=
                 f"AquaLog_Historial_{codigo}.csv",
             mime="text/csv",
@@ -2715,7 +3420,7 @@ elif opcion == "ℹ️ Proyecto":
     )
 
     card(
-        "Proyecto de investigación",
+        "Título del proyecto",
         "<b>Desarrollo de software basado "
         "en logaritmos matemáticos para "
         "la gestión eficiente del agua "
@@ -2725,14 +3430,15 @@ elif opcion == "ℹ️ Proyecto":
     )
 
     st.subheader(
-        "🎯 Propósito del sistema"
+        "🎯 Propósito"
     )
 
     st.write(
-        "AquaLog BI convierte datos de consumo "
-        "en indicadores matemáticos, análisis "
-        "comparativos y escenarios de ahorro "
-        "orientados al apoyo de la toma de decisiones."
+        "AquaLog BI busca convertir datos "
+        "de consumo de agua en información "
+        "útil mediante procesamiento matemático, "
+        "análisis histórico, comparación de periodos "
+        "y simulación de escenarios."
     )
 
     st.success(
@@ -2769,27 +3475,29 @@ elif opcion == "ℹ️ Proyecto":
     )
 
     st.subheader(
-        "🚀 Funciones principales"
+        "🚀 Capacidades del sistema"
     )
 
     funciones = [
-        "Registro de consumos.",
-        "Historial por código.",
-        "Análisis matemático.",
+        "Registro de información de consumo.",
+        "Uso de diferentes sectores y contextos.",
+        "Múltiples tipos de uso del agua.",
+        "Cálculo del consumo diario.",
+        "Cálculo de consumo unitario.",
         "Transformación logarítmica.",
+        "Historial por código.",
         "Comparación entre periodos.",
-        "Detección de aumentos y reducciones.",
+        "Detección de variaciones.",
         "Análisis de tendencias.",
         "Centro de alertas.",
-        "Análisis por sector.",
-        "Análisis por tipo de uso.",
         "Simulación individual.",
         "Simulación colectiva.",
         "Proyección de ahorro.",
         "Estimación económica.",
-        "Recomendaciones.",
-        "Descarga de datos.",
-        "Generación de reportes."
+        "Análisis por sectores.",
+        "Ranking de consumo.",
+        "Exportación CSV.",
+        "Reportes PDF."
     ]
 
     for funcion in funciones:
