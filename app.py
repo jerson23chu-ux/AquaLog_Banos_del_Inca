@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import math
 import os
-
 from datetime import date
-from textwrap import dedent
 
 
 # ============================================================
@@ -17,7 +15,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 
 ARCHIVO_DATOS = "hogares.csv"
 
@@ -39,686 +36,426 @@ COLUMNAS = [
     "Zona / referencia",
     "Tipo de uso",
     "Personas",
-    "Consumo mensual (m³)",
+    "Consumo del periodo (m³)",
     "Días",
     "Tarifa (S/ por m³)",
     "Consumo diario (m³)",
     "Consumo por persona (L/día)",
     "Índice logarítmico",
     "Nivel",
-    "Costo mensual (S/)",
+    "Costo del periodo (S/)",
     "Observaciones"
 ]
 
 
 # ============================================================
-# FUNCIÓN PARA MOSTRAR HTML CORRECTAMENTE
-# ============================================================
-
-def html(contenido):
-
-    st.markdown(
-        dedent(contenido).strip(),
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# DISEÑO VISUAL
+# ESTILOS
 # ============================================================
 
 st.markdown(
     """
-<style>
-
-/* =========================================
-FONDO GENERAL
-========================================= */
-
-.stApp {
-
-    background:
-
-        radial-gradient(
-            circle at 12% 8%,
-            rgba(32,196,232,0.13),
-            transparent 24%
-        ),
-
-        radial-gradient(
-            circle at 90% 18%,
-            rgba(11,99,206,0.11),
-            transparent 26%
-        ),
-
-        linear-gradient(
-            135deg,
-            #f4fbff 0%,
-            #eaf7ff 55%,
-            #ffffff 100%
-        );
-
-    color: #123047;
-
-}
-
-
-.block-container {
-
-    padding-top: 1.6rem;
-
-    padding-bottom: 2rem;
-
-    max-width: 1500px;
-
-}
-
-
-h1,
-h2,
-h3,
-h4 {
-
-    color: #0a4f82 !important;
-
-}
-
-
-p,
-span,
-label {
-
-    color: #16384f;
-
-}
-
-
-/* =========================================
-ENCABEZADO PRINCIPAL
-========================================= */
-
-.hero {
-
-    position: relative;
-
-    overflow: hidden;
-
-    background:
-
-        linear-gradient(
-            120deg,
-            #073d9e 0%,
-            #0b72d8 48%,
-            #17b9dd 100%
-        );
-
-    border-radius: 30px;
-
-    padding: 38px 42px;
-
-    margin-bottom: 26px;
-
-    box-shadow:
-
-        0 18px 45px
-        rgba(8,92,160,0.22);
-
-}
-
-
-.hero::before {
-
-    content: "";
-
-    position: absolute;
-
-    width: 360px;
-
-    height: 360px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(255,255,255,0.08);
-
-    right: -140px;
-
-    top: -175px;
-
-}
-
-
-.hero::after {
-
-    content: "";
-
-    position: absolute;
-
-    width: 220px;
-
-    height: 220px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(255,255,255,0.06);
-
-    right: 130px;
-
-    bottom: -165px;
-
-}
-
-
-.hero-grid {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 24px;
-
-    position: relative;
-
-    z-index: 2;
-
-}
-
-
-.hero-copy {
-
-    max-width: 900px;
-
-}
-
-
-.hero-badge {
-
-    display: inline-block;
-
-    background:
-        rgba(255,255,255,0.14);
-
-    border:
-        1px solid
-        rgba(255,255,255,0.28);
-
-    color:
-        white !important;
-
-    border-radius: 999px;
-
-    padding: 7px 13px;
-
-    font-size: 12px;
-
-    font-weight: 800;
-
-    letter-spacing: 0.8px;
-
-    margin-bottom: 13px;
-
-}
-
-
-.hero h1 {
-
-    color:
-        white !important;
-
-    font-size: 50px;
-
-    line-height: 1.05;
-
-    margin: 0;
-
-    font-weight: 850;
-
-}
-
-
-.hero h1 span {
-
-    color:
-        #85ecff !important;
-
-}
-
-
-.hero h3 {
-
-    color:
-        white !important;
-
-    margin: 11px 0 8px 0;
-
-    font-size: 21px;
-
-}
-
-
-.hero p {
-
-    color:
-        #edfaff !important;
-
-    font-size: 16px;
-
-    line-height: 1.55;
-
-    margin: 0;
-
-}
-
-
-.hero-tags {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 8px;
-
-    margin-top: 18px;
-
-}
-
-
-.hero-tag {
-
-    color:
-        white !important;
-
-    background:
-        rgba(255,255,255,0.13);
-
-    border:
-        1px solid
-        rgba(255,255,255,0.20);
-
-    padding: 7px 12px;
-
-    border-radius: 999px;
-
-    font-weight: 650;
-
-    font-size: 13px;
-
-}
-
-
-.hero-drop {
-
-    min-width: 125px;
-
-    min-height: 125px;
-
-    border-radius: 50%;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 67px;
-
-    background:
-        rgba(255,255,255,0.13);
-
-    border:
-        1px solid
-        rgba(255,255,255,0.30);
-
-    box-shadow:
-
-        inset 0 0 30px
-        rgba(255,255,255,0.10);
-
-}
-
-
-/* =========================================
-TARJETAS DE INDICADORES
-========================================= */
-
-.kpi {
-
-    background:
-        rgba(255,255,255,0.96);
-
-    border:
-        1px solid
-        rgba(11,99,206,0.09);
-
-    border-radius: 20px;
-
-    padding: 20px 18px;
-
-    text-align: center;
-
-    box-shadow:
-
-        0 8px 24px
-        rgba(19,84,128,0.08);
-
-    min-height: 140px;
-
-}
-
-
-.kpi .icon {
-
-    font-size: 28px;
-
-}
-
-
-.kpi .value {
-
-    font-size: 29px;
-
-    font-weight: 850;
-
-    color:
-        #0b63ce !important;
-
-    margin-top: 4px;
-
-}
-
-
-.kpi .label {
-
-    font-size: 12px;
-
-    font-weight: 800;
-
-    letter-spacing: 0.35px;
-
-    color:
-        #496a7e !important;
-
-}
-
-
-/* =========================================
-TARJETAS GENERALES
-========================================= */
-
-.card {
-
-    background:
-        rgba(255,255,255,0.95);
-
-    border:
-        1px solid
-        rgba(11,99,206,0.09);
-
-    border-radius: 20px;
-
-    padding: 21px;
-
-    margin:
-        8px 0 16px 0;
-
-    box-shadow:
-
-        0 7px 22px
-        rgba(19,84,128,0.07);
-
-}
-
-
-.card h3 {
-
-    margin-top: 0;
-
-}
-
-
-/* =========================================
-RECOMENDACIONES
-========================================= */
-
-.tip {
-
-    background:
-        white;
-
-    border-left:
-        6px solid #0b8fe3;
-
-    border-radius:
-        14px;
-
-    padding:
-        15px 18px;
-
-    margin:
-        9px 0;
-
-    box-shadow:
-
-        0 5px 16px
-        rgba(0,0,0,0.05);
-
-}
-
-
-.tip p {
-
-    margin: 0;
-
-}
-
-
-/* =========================================
-CRÉDITOS
-========================================= */
-
-.credit {
-
-    background:
-
-        linear-gradient(
-            135deg,
-            #ffffff,
-            #eef9ff
-        );
-
-    border:
-        1px solid #d1edf9;
-
-    border-radius:
-        16px;
-
-    padding:
-        15px 17px;
-
-    margin:
-        8px 0;
-
-}
-
-
-/* =========================================
-SIDEBAR
-========================================= */
-
-section[data-testid="stSidebar"] {
-
-    background:
-
-        linear-gradient(
-            180deg,
-            #0647a8 0%,
-            #087bd2 52%,
-            #0ca5cf 100%
-        );
-
-    border-right:
-
-        1px solid
-        rgba(255,255,255,0.15);
-
-}
-
-
-section[data-testid="stSidebar"] * {
-
-    color:
-        white !important;
-
-}
-
-
-section[data-testid="stSidebar"]
-div[role="radiogroup"] > label {
-
-    background:
-        rgba(255,255,255,0.04);
-
-    padding:
-        8px 10px;
-
-    margin:
-        3px 0;
-
-    border-radius:
-        11px;
-
-}
-
-
-section[data-testid="stSidebar"]
-div[role="radiogroup"] > label:hover {
-
-    background:
-        rgba(255,255,255,0.13);
-
-}
-
-
-/* =========================================
-BOTONES
-========================================= */
-
-.stButton button {
-
-    border:
-        none;
-
-    border-radius:
-        13px;
-
-    font-weight:
-        750;
-
-    background:
-
-        linear-gradient(
-            90deg,
-            #0b63ce,
-            #0b9bdc
-        );
-
-    color:
-        white !important;
-
-}
-
-
-.stDownloadButton button {
-
-    border-radius:
-        13px;
-
-    font-weight:
-        700;
-
-}
-
-
-/* =========================================
-MÉTRICAS NATIVAS
-========================================= */
-
-[data-testid="stMetricValue"] {
-
-    color:
-        #0a568d !important;
-
-    font-weight:
-        800;
-
-}
-
-
-[data-testid="stMetricLabel"] {
-
-    color:
-        #234a62 !important;
-
-}
-
-
-/* =========================================
-PIE
-========================================= */
-
-.footer {
-
-    text-align:
-        center;
-
-    color:
-        #507184;
-
-    padding:
-        18px 0 4px 0;
-
-    font-size:
-        13px;
-
-}
-
-
-/* =========================================
-CELULARES
-========================================= */
-
-@media (max-width: 850px) {
-
-    .hero-grid {
-
-        display:
-            block;
-
+    <style>
+
+    .stApp {
+        background:
+            radial-gradient(
+                circle at 10% 10%,
+                rgba(0, 174, 239, 0.10),
+                transparent 24%
+            ),
+            radial-gradient(
+                circle at 90% 15%,
+                rgba(0, 92, 230, 0.09),
+                transparent 26%
+            ),
+            linear-gradient(
+                135deg,
+                #f6fcff 0%,
+                #eaf7ff 55%,
+                #ffffff 100%
+            );
+
+        color: #17384d;
     }
 
-    .hero-drop {
 
-        display:
-            none;
-
+    .block-container {
+        max-width: 1450px;
+        padding-top: 1.4rem;
+        padding-bottom: 2rem;
     }
 
-    .hero h1 {
+
+    h1,
+    h2,
+    h3 {
+        color: #0b4f7c !important;
+    }
+
+
+    [data-testid="stSidebar"] {
+        background:
+            linear-gradient(
+                180deg,
+                #063d9d 0%,
+                #0875d1 55%,
+                #00a7cf 100%
+            );
+
+        border-right:
+            1px solid
+            rgba(255,255,255,0.15);
+    }
+
+
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+
+    [data-testid="stSidebar"]
+    [data-testid="stRadio"] label {
+        padding: 0.35rem 0.5rem;
+        border-radius: 10px;
+    }
+
+
+    [data-testid="stSidebar"]
+    [data-testid="stRadio"] label:hover {
+        background:
+            rgba(255,255,255,0.10);
+    }
+
+
+    div[data-testid="stMetric"] {
+        background:
+            rgba(255,255,255,0.96);
+
+        border:
+            1px solid
+            rgba(10, 100, 160, 0.10);
+
+        padding:
+            18px 18px;
+
+        border-radius:
+            18px;
+
+        box-shadow:
+            0 8px 24px
+            rgba(0, 70, 120, 0.07);
+    }
+
+
+    [data-testid="stMetricValue"] {
+        color:
+            #0b63ce !important;
+
+        font-weight:
+            800;
+    }
+
+
+    [data-testid="stMetricLabel"] {
+        color:
+            #3f6277 !important;
+
+        font-weight:
+            700;
+    }
+
+
+    .hero {
+        background:
+            linear-gradient(
+                120deg,
+                #063d9d 0%,
+                #0875d1 52%,
+                #12b9dc 100%
+            );
+
+        border-radius:
+            28px;
+
+        padding:
+            30px 34px;
+
+        margin-bottom:
+            24px;
+
+        box-shadow:
+            0 18px 45px
+            rgba(8, 92, 160, 0.22);
+
+        color:
+            white;
+
+        position:
+            relative;
+
+        overflow:
+            hidden;
+    }
+
+
+    .hero-title {
+        font-size:
+            46px;
+
+        line-height:
+            1.05;
+
+        font-weight:
+            850;
+
+        margin-bottom:
+            8px;
+
+        color:
+            white !important;
+    }
+
+
+    .hero-subtitle {
+        font-size:
+            19px;
+
+        font-weight:
+            650;
+
+        color:
+            white !important;
+
+        margin-bottom:
+            8px;
+    }
+
+
+    .hero-text {
+        font-size:
+            15px;
+
+        color:
+            #eefbff !important;
+
+        max-width:
+            900px;
+
+        line-height:
+            1.55;
+    }
+
+
+    .hero-chip {
+        display:
+            inline-block;
+
+        margin:
+            10px 6px 0 0;
+
+        padding:
+            7px 12px;
+
+        border-radius:
+            999px;
+
+        border:
+            1px solid
+            rgba(255,255,255,0.25);
+
+        background:
+            rgba(255,255,255,0.13);
+
+        color:
+            white !important;
 
         font-size:
-            40px;
+            12px;
 
+        font-weight:
+            700;
     }
 
-}
 
-</style>
-""",
+    .info-card {
+        background:
+            rgba(255,255,255,0.96);
+
+        border:
+            1px solid
+            rgba(10, 100, 160, 0.10);
+
+        border-radius:
+            18px;
+
+        padding:
+            18px 20px;
+
+        box-shadow:
+            0 8px 24px
+            rgba(0, 70, 120, 0.06);
+
+        margin:
+            8px 0 14px 0;
+    }
+
+
+    .tip-card {
+        background:
+            white;
+
+        border-left:
+            6px solid #0b8fe3;
+
+        border-radius:
+            14px;
+
+        padding:
+            15px 18px;
+
+        margin:
+            9px 0;
+
+        box-shadow:
+            0 5px 16px
+            rgba(0,0,0,0.05);
+    }
+
+
+    .credit-card {
+        background:
+            linear-gradient(
+                135deg,
+                #ffffff,
+                #eef9ff
+            );
+
+        border:
+            1px solid #d1edf9;
+
+        border-radius:
+            15px;
+
+        padding:
+            14px 16px;
+
+        margin:
+            8px 0;
+    }
+
+
+    .footer {
+        text-align:
+            center;
+
+        color:
+            #557286;
+
+        padding:
+            18px 0 4px 0;
+
+        font-size:
+            13px;
+    }
+
+
+    .stButton button {
+        border:
+            none;
+
+        border-radius:
+            12px;
+
+        font-weight:
+            700;
+    }
+
+
+    .stDownloadButton button {
+        border-radius:
+            12px;
+
+        font-weight:
+            700;
+    }
+
+    </style>
+    """,
     unsafe_allow_html=True
 )
+
+
+# ============================================================
+# FUNCIONES DE INTERFAZ
+# ============================================================
+
+def hero():
+
+    contenido = (
+        '<div class="hero">'
+        '<div class="hero-title">💧 AquaLog BI</div>'
+        '<div class="hero-subtitle">'
+        'Analiza, compara y proyecta el consumo de agua'
+        '</div>'
+        '<div class="hero-text">'
+        'Sistema interactivo para registrar consumos, '
+        'explorar patrones, simular escenarios de ahorro '
+        'y apoyar decisiones para un uso más eficiente del agua.'
+        '</div>'
+        '<span class="hero-chip">📍 Ubicación configurable</span>'
+        '<span class="hero-chip">🏠 Múltiples tipos de uso</span>'
+        '<span class="hero-chip">📊 Análisis dinámico</span>'
+        '<span class="hero-chip">🧮 Modelo matemático</span>'
+        '</div>'
+    )
+
+    st.markdown(
+        contenido,
+        unsafe_allow_html=True
+    )
+
+
+def info_card(
+    titulo,
+    texto,
+    icono="💧"
+):
+
+    st.markdown(
+        f'<div class="info-card">'
+        f'<h3>{icono} {titulo}</h3>'
+        f'<p>{texto}</p>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+
+def tip_card(
+    titulo,
+    texto
+):
+
+    st.markdown(
+        f'<div class="tip-card">'
+        f'<strong>{titulo}</strong>'
+        f'<br>{texto}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+
+def credit_card(
+    texto,
+    icono="👤"
+):
+
+    st.markdown(
+        f'<div class="credit-card">'
+        f'{icono} '
+        f'<strong>{texto}</strong>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 
 # ============================================================
@@ -732,110 +469,6 @@ def dataframe_vacio():
     )
 
 
-# ============================================================
-# ANÁLISIS MATEMÁTICO
-# ============================================================
-
-def analizar_consumo(
-    personas,
-    consumo_m3,
-    dias,
-    tipo_uso,
-    tarifa
-):
-
-    consumo_diario = (
-        consumo_m3 /
-        dias
-    )
-
-
-    personas_seguras = max(
-        int(personas),
-        1
-    )
-
-
-    consumo_persona_m3_dia = (
-
-        consumo_m3 /
-
-        (
-            personas_seguras *
-            dias
-        )
-
-    )
-
-
-    litros_persona_dia = (
-
-        consumo_persona_m3_dia *
-        1000
-
-    )
-
-
-    indice_log = (
-
-        math.log10(
-
-            1 +
-            consumo_persona_m3_dia
-
-        )
-
-    )
-
-
-    costo = (
-
-        consumo_m3 *
-        tarifa
-
-    )
-
-
-    # Clasificación únicamente para uso doméstico
-
-    if tipo_uso == "Doméstico":
-
-        if litros_persona_dia < 100:
-
-            nivel = "BAJO"
-
-        elif litros_persona_dia <= 170:
-
-            nivel = "MODERADO"
-
-        else:
-
-            nivel = "ALTO"
-
-    else:
-
-        nivel = "ANÁLISIS GENERAL"
-
-
-    return (
-
-        consumo_diario,
-
-        litros_persona_dia,
-
-        indice_log,
-
-        nivel,
-
-        costo
-
-    )
-
-
-# ============================================================
-# COMPATIBILIDAD CON TU VERSIÓN ANTERIOR
-# ============================================================
-
 def normalizar_df(df):
 
     if df is None or df.empty:
@@ -846,11 +479,11 @@ def normalizar_df(df):
     df = df.copy()
 
 
-    # -----------------------------------------
-    # CONVERTIR CAMPOS DE LA VERSIÓN ANTERIOR
-    # -----------------------------------------
+    # --------------------------------------------------------
+    # COMPATIBILIDAD CON TU APP ANTERIOR
+    # --------------------------------------------------------
 
-    mapa = {
+    equivalencias = {
 
         "Hogar":
             "Código",
@@ -862,12 +495,20 @@ def normalizar_df(df):
             "Zona / referencia",
 
         "Habitantes":
-            "Personas"
+            "Personas",
+
+        "Consumo mensual (m³)":
+            "Consumo del periodo (m³)",
+
+        "Costo mensual (S/)":
+            "Costo del periodo (S/)"
 
     }
 
 
-    for antigua, nueva in mapa.items():
+    for antigua, nueva in (
+        equivalencias.items()
+    ):
 
         if (
             antigua in df.columns
@@ -880,52 +521,82 @@ def normalizar_df(df):
             )
 
 
-    # -----------------------------------------
-    # CREAR COLUMNAS FALTANTES
-    # -----------------------------------------
+    # --------------------------------------------------------
+    # VALORES POR DEFECTO
+    # --------------------------------------------------------
 
-    for columna in COLUMNAS:
+    defaults = {
+
+        "Código":
+            "",
+
+        "Fecha":
+            pd.Timestamp
+            .today()
+            .strftime(
+                "%Y-%m-%d"
+            ),
+
+        "Sector / comunidad":
+            "",
+
+        "Zona / referencia":
+            "",
+
+        "Tipo de uso":
+            "Doméstico",
+
+        "Personas":
+            1,
+
+        "Consumo del periodo (m³)":
+            0.0,
+
+        "Días":
+            30,
+
+        "Tarifa (S/ por m³)":
+            0.0,
+
+        "Consumo diario (m³)":
+            0.0,
+
+        "Consumo por persona (L/día)":
+            0.0,
+
+        "Índice logarítmico":
+            0.0,
+
+        "Nivel":
+            "SIN CLASIFICAR",
+
+        "Costo del periodo (S/)":
+            0.0,
+
+        "Observaciones":
+            ""
+
+    }
+
+
+    for columna, valor in (
+        defaults.items()
+    ):
 
         if columna not in df.columns:
 
-            if columna == "Tipo de uso":
-
-                df[columna] = (
-                    "Doméstico"
-                )
-
-            elif columna == "Personas":
-
-                df[columna] = 1
-
-            elif columna == "Días":
-
-                df[columna] = 30
-
-            elif columna in [
-
-                "Tarifa (S/ por m³)",
-
-                "Costo mensual (S/)"
-
-            ]:
-
-                df[columna] = 0.0
-
-            else:
-
-                df[columna] = ""
+            df[columna] = valor
 
 
-    # -----------------------------------------
-    # DATOS NUMÉRICOS
-    # -----------------------------------------
+    # --------------------------------------------------------
+    # CONVERTIR DATOS NUMÉRICOS
+    # --------------------------------------------------------
 
     numericas = [
 
         "Personas",
 
-        "Consumo mensual (m³)",
+        "Consumo del periodo (m³)",
 
         "Días",
 
@@ -937,7 +608,7 @@ def normalizar_df(df):
 
         "Índice logarítmico",
 
-        "Costo mensual (S/)"
+        "Costo del periodo (S/)"
 
     ]
 
@@ -999,10 +670,12 @@ def normalizar_df(df):
     )
 
 
-    hoy = (
+    fecha_actual = (
 
         pd.Timestamp
+
         .today()
+
         .strftime(
             "%Y-%m-%d"
         )
@@ -1021,13 +694,10 @@ def normalizar_df(df):
             {
 
                 "":
-                    hoy,
+                    fecha_actual,
 
                 "nan":
-                    hoy,
-
-                "NaT":
-                    hoy
+                    fecha_actual
 
             }
 
@@ -1040,7 +710,7 @@ def normalizar_df(df):
 
 
 # ============================================================
-# CARGAR Y GUARDAR
+# CARGAR DATOS
 # ============================================================
 
 def cargar_datos():
@@ -1063,14 +733,20 @@ def cargar_datos():
 
             return dataframe_vacio()
 
+
     return dataframe_vacio()
 
+
+# ============================================================
+# GUARDAR DATOS
+# ============================================================
 
 def guardar_datos(df):
 
     df = normalizar_df(
         df
     )
+
 
     df.to_csv(
 
@@ -1084,6 +760,413 @@ def guardar_datos(df):
     )
 
 
+# ============================================================
+# MODELO MATEMÁTICO
+# ============================================================
+
+def analizar_consumo(
+    personas,
+    consumo_m3,
+    dias,
+    tipo_uso,
+    tarifa
+):
+
+    personas = max(
+        int(personas),
+        1
+    )
+
+
+    dias = max(
+        int(dias),
+        1
+    )
+
+
+    consumo_diario = (
+
+        consumo_m3 /
+        dias
+
+    )
+
+
+    consumo_persona_m3_dia = (
+
+        consumo_m3 /
+
+        (
+            personas *
+            dias
+        )
+
+    )
+
+
+    litros_persona_dia = (
+
+        consumo_persona_m3_dia *
+        1000
+
+    )
+
+
+    indice_log = (
+
+        math.log10(
+
+            1 +
+            consumo_persona_m3_dia
+
+        )
+
+    )
+
+
+    costo = (
+
+        consumo_m3 *
+        tarifa
+
+    )
+
+
+    # --------------------------------------------------------
+    # CLASIFICACIÓN DOMÉSTICA
+    # --------------------------------------------------------
+
+    if tipo_uso == "Doméstico":
+
+        if litros_persona_dia < 100:
+
+            nivel = "BAJO"
+
+
+        elif litros_persona_dia <= 170:
+
+            nivel = "MODERADO"
+
+
+        else:
+
+            nivel = "ALTO"
+
+
+    else:
+
+        nivel = (
+            "ANÁLISIS GENERAL"
+        )
+
+
+    return {
+
+        "consumo_diario":
+            consumo_diario,
+
+        "consumo_persona_m3_dia":
+            consumo_persona_m3_dia,
+
+        "litros_persona_dia":
+            litros_persona_dia,
+
+        "indice_log":
+            indice_log,
+
+        "nivel":
+            nivel,
+
+        "costo":
+            costo
+
+    }
+
+
+# ============================================================
+# RECOMENDACIONES
+# ============================================================
+
+def recomendaciones(
+    tipo_uso,
+    nivel=None
+):
+
+    base = {
+
+
+        "Doméstico": [
+
+            (
+                "🚰 Cierra los caños",
+
+                "Evita mantener el agua "
+                "corriendo cuando no "
+                "sea necesaria."
+            ),
+
+            (
+                "🚿 Reduce el tiempo de ducha",
+
+                "Disminuye algunos minutos "
+                "y corta el agua mientras "
+                "aplicas jabón o champú."
+            ),
+
+            (
+                "🔧 Revisa fugas",
+
+                "Inspecciona caños, "
+                "tanques, conexiones "
+                "e inodoros."
+            ),
+
+            (
+                "🧺 Optimiza la lavadora",
+
+                "Usa cargas completas "
+                "y evita ciclos "
+                "innecesarios."
+            ),
+
+            (
+                "📊 Controla tu consumo",
+
+                "Compara distintos periodos "
+                "para detectar aumentos "
+                "anormales."
+            )
+
+        ],
+
+
+        "Comercial": [
+
+            (
+                "📋 Control por actividad",
+
+                "Registra el consumo "
+                "por turno, área o "
+                "actividad comercial."
+            ),
+
+            (
+                "🔧 Mantén equipos y conexiones",
+
+                "Revisa periódicamente "
+                "los puntos donde "
+                "se utiliza agua."
+            ),
+
+            (
+                "🧹 Optimiza la limpieza",
+
+                "Evita dejar correr agua "
+                "cuando un recipiente "
+                "o sistema dosificado "
+                "sea suficiente."
+            ),
+
+            (
+                "🎯 Define metas",
+
+                "Usa el simulador "
+                "para establecer "
+                "reducciones realistas."
+            )
+
+        ],
+
+
+        "Educativo": [
+
+            (
+                "🏫 Promueve hábitos",
+
+                "Desarrolla campañas "
+                "de uso responsable "
+                "entre estudiantes "
+                "y personal."
+            ),
+
+            (
+                "🚰 Revisa servicios higiénicos",
+
+                "Controla pérdidas "
+                "en lavatorios, "
+                "inodoros y conexiones."
+            ),
+
+            (
+                "📈 Monitorea mensualmente",
+
+                "Relaciona el consumo "
+                "con asistencia "
+                "y actividades institucionales."
+            ),
+
+            (
+                "🌱 Optimiza el riego",
+
+                "Prefiere horarios "
+                "de menor evaporación."
+            )
+
+        ],
+
+
+        "Institucional": [
+
+            (
+                "📊 Usa indicadores",
+
+                "Compara consumo por área, "
+                "trabajador o periodo."
+            ),
+
+            (
+                "🔧 Programa mantenimiento",
+
+                "Realiza revisiones "
+                "preventivas "
+                "de instalaciones."
+            ),
+
+            (
+                "🚻 Prioriza zonas críticas",
+
+                "Supervisa servicios "
+                "higiénicos y puntos "
+                "de alto uso."
+            ),
+
+            (
+                "🎯 Establece metas",
+
+                "Define reducciones "
+                "progresivas y "
+                "evalúa resultados."
+            )
+
+        ],
+
+
+        "Riego": [
+
+            (
+                "🌅 Elige el horario adecuado",
+
+                "Riega temprano "
+                "o al final "
+                "de la tarde."
+            ),
+
+            (
+                "💧 Ajusta el volumen",
+
+                "Evita aplicar más agua "
+                "de la necesaria."
+            ),
+
+            (
+                "🔍 Revisa pérdidas",
+
+                "Inspecciona mangueras, "
+                "uniones y conexiones."
+            ),
+
+            (
+                "📅 Registra cada jornada",
+
+                "Compara volumen, "
+                "frecuencia "
+                "y área irrigada."
+            )
+
+        ],
+
+
+        "Otro": [
+
+            (
+                "📊 Mide primero",
+
+                "Registra el consumo "
+                "de forma periódica."
+            ),
+
+            (
+                "🔧 Revisa pérdidas",
+
+                "Identifica fugas "
+                "o usos innecesarios."
+            ),
+
+            (
+                "🎯 Define una meta",
+
+                "Usa el simulador "
+                "para evaluar reducciones."
+            ),
+
+            (
+                "📈 Evalúa resultados",
+
+                "Compara periodos "
+                "antes y después "
+                "de aplicar mejoras."
+            )
+
+        ]
+
+    }
+
+
+    lista = list(
+
+        base.get(
+
+            tipo_uso,
+
+            base["Otro"]
+
+        )
+
+    )
+
+
+    if (
+        tipo_uso == "Doméstico"
+        and
+        nivel == "ALTO"
+    ):
+
+        lista.insert(
+
+            0,
+
+            (
+                "🚨 Atención prioritaria",
+
+                "El consumo por persona "
+                "es alto dentro de "
+                "los criterios referenciales "
+                "del prototipo. "
+                "Revisa primero posibles "
+                "fugas y hábitos de "
+                "mayor consumo."
+            )
+
+        )
+
+
+    return lista
+
+
+# ============================================================
+# INICIAR SESIÓN
+# ============================================================
+
 if "df" not in st.session_state:
 
     st.session_state.df = (
@@ -1091,116 +1174,22 @@ if "df" not in st.session_state:
     )
 
 
-# ============================================================
-# ENCABEZADO PRINCIPAL
-# ============================================================
-
-html(
-    """
-    <div class="hero">
-
-        <div class="hero-grid">
-
-            <div class="hero-copy">
-
-                <div class="hero-badge">
-                    💧 SISTEMA INTELIGENTE DE GESTIÓN DEL AGUA
-                </div>
-
-                <h1>
-                    AquaLog <span>BI</span>
-                </h1>
-
-                <h3>
-                    Analiza, compara y proyecta
-                    el consumo de agua
-                </h3>
-
-                <p>
-
-                    Una plataforma interactiva
-                    para registrar consumos,
-                    explorar patrones,
-                    simular escenarios de ahorro
-                    y apoyar decisiones para
-                    el uso responsable del agua.
-
-                </p>
-
-                <div class="hero-tags">
-
-                    <div class="hero-tag">
-                        📍 Ubicación configurable
-                    </div>
-
-                    <div class="hero-tag">
-                        🏠 Múltiples tipos de uso
-                    </div>
-
-                    <div class="hero-tag">
-                        📊 Análisis dinámico
-                    </div>
-
-                    <div class="hero-tag">
-                        🧮 Modelo matemático
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="hero-drop">
-                💧
-            </div>
-
-        </div>
-
-    </div>
-    """
+df = normalizar_df(
+    st.session_state.df
 )
 
 
 # ============================================================
-# MENÚ LATERAL
+# SIDEBAR
 # ============================================================
 
-st.sidebar.markdown(
+st.sidebar.title(
+    "💧 AquaLog BI"
+)
 
-    dedent(
-        """
-        <div style="
-            text-align:center;
-            padding:8px 0 18px 0;
-        ">
 
-            <div style="
-                font-size:54px;
-            ">
-                💧
-            </div>
-
-            <div style="
-                font-size:24px;
-                font-weight:850;
-                color:white;
-            ">
-                AquaLog BI
-            </div>
-
-            <div style="
-                font-size:13px;
-                color:#dff7ff;
-                margin-top:4px;
-            ">
-                Gestión interactiva del agua
-            </div>
-
-        </div>
-        """
-    ).strip(),
-
-    unsafe_allow_html=True
-
+st.sidebar.caption(
+    "Gestión interactiva del agua"
 )
 
 
@@ -1234,9 +1223,24 @@ opcion = st.sidebar.radio(
 )
 
 
-df = normalizar_df(
-    st.session_state.df
+st.sidebar.divider()
+
+
+st.sidebar.caption(
+
+    "Sistema de uso general. "
+    "La muestra de 75 usuarios "
+    "corresponde a la investigación, "
+    "no al límite del software."
+
 )
+
+
+# ============================================================
+# ENCABEZADO PRINCIPAL
+# ============================================================
+
+hero()
 
 
 # ============================================================
@@ -1245,51 +1249,88 @@ df = normalizar_df(
 
 if opcion == "🏠 Inicio":
 
-    st.header(
-        "🏠 Panel general"
+    st.title(
+        "Panel general"
     )
 
 
     if df.empty:
 
-        html(
-            """
-            <div class="card">
+        info_card(
 
-                <h3>
-                    👋 Bienvenido a AquaLog BI
-                </h3>
+            "Bienvenido a AquaLog BI",
 
-                <p>
+            "Todavía no existen registros. "
+            "Empieza desde la opción "
+            "<b>Nuevo registro</b>. "
+            "El sistema puede utilizarse "
+            "con diferentes sectores, "
+            "comunidades, usuarios "
+            "y tipos de consumo.",
 
-                    Todavía no existen registros.
+            "👋"
 
-                    Empieza ingresando información
-                    desde la sección
-
-                    <b>
-                    ➕ Nuevo registro
-                    </b>.
-
-                </p>
-
-                <p>
-
-                    AquaLog BI no está limitado
-                    a una comunidad ni a un
-                    número determinado de usuarios.
-
-                </p>
-
-            </div>
-            """
         )
+
+
+        c1, c2, c3 = (
+            st.columns(3)
+        )
+
+
+        with c1:
+
+            info_card(
+
+                "Registra",
+
+                "Guarda información "
+                "del consumo "
+                "y su contexto.",
+
+                "📝"
+
+            )
+
+
+        with c2:
+
+            info_card(
+
+                "Analiza",
+
+                "Calcula indicadores "
+                "y compara distintos "
+                "registros.",
+
+                "📊"
+
+            )
+
+
+        with c3:
+
+            info_card(
+
+                "Proyecta",
+
+                "Simula escenarios "
+                "de ahorro de agua "
+                "y dinero.",
+
+                "🎯"
+
+            )
 
 
     else:
 
-        total_registros = len(
-            df
+        # ----------------------------------------------------
+        # INDICADORES
+        # ----------------------------------------------------
+
+        total_registros = (
+            len(df)
         )
 
 
@@ -1307,7 +1348,7 @@ if opcion == "🏠 Inicio":
         consumo_total = (
 
             df[
-                "Consumo mensual (m³)"
+                "Consumo del periodo (m³)"
             ]
 
             .sum()
@@ -1318,7 +1359,7 @@ if opcion == "🏠 Inicio":
         consumo_promedio = (
 
             df[
-                "Consumo mensual (m³)"
+                "Consumo del periodo (m³)"
             ]
 
             .mean()
@@ -1329,7 +1370,7 @@ if opcion == "🏠 Inicio":
         costo_total = (
 
             df[
-                "Costo mensual (S/)"
+                "Costo del periodo (S/)"
             ]
 
             .sum()
@@ -1337,97 +1378,74 @@ if opcion == "🏠 Inicio":
         )
 
 
-        # =====================================
-        # KPIs
-        # =====================================
-
-        columnas = st.columns(5)
-
-
-        tarjetas = [
-
-            (
-                "🧾",
-                total_registros,
-                "REGISTROS"
-            ),
-
-            (
-                "👥",
-                usuarios_unicos,
-                "USUARIOS / PUNTOS"
-            ),
-
-            (
-                "💧",
-                f"{consumo_total:.1f}",
-                "CONSUMO TOTAL m³"
-            ),
-
-            (
-                "📊",
-                f"{consumo_promedio:.1f}",
-                "PROMEDIO m³"
-            ),
-
-            (
-                "💰",
-                f"S/ {costo_total:.2f}",
-                "COSTO ESTIMADO"
-            )
-
-        ]
-
-
-        for columna, tarjeta in zip(
-            columnas,
-            tarjetas
-        ):
-
-            icono, valor, texto = (
-                tarjeta
-            )
-
-
-            with columna:
-
-                html(
-                    f"""
-                    <div class="kpi">
-
-                        <div class="icon">
-                            {icono}
-                        </div>
-
-                        <div class="value">
-                            {valor}
-                        </div>
-
-                        <div class="label">
-                            {texto}
-                        </div>
-
-                    </div>
-                    """
-                )
-
-
-        st.write("")
-
-
-        # =====================================
-        # GRÁFICOS RÁPIDOS
-        # =====================================
-
-        c1, c2 = st.columns(
-            [1.15, 1]
+        c1, c2, c3, c4, c5 = (
+            st.columns(5)
         )
 
 
-        with c1:
+        c1.metric(
 
-            st.subheader(
-                "📊 Consumo por tipo de uso"
+            "🧾 Registros",
+
+            total_registros
+
+        )
+
+
+        c2.metric(
+
+            "👥 Usuarios/puntos",
+
+            usuarios_unicos
+
+        )
+
+
+        c3.metric(
+
+            "💧 Consumo total",
+
+            f"{consumo_total:.1f} m³"
+
+        )
+
+
+        c4.metric(
+
+            "📊 Promedio",
+
+            f"{consumo_promedio:.1f} m³"
+
+        )
+
+
+        c5.metric(
+
+            "💰 Costo estimado",
+
+            f"S/ {costo_total:.2f}"
+
+        )
+
+
+        st.subheader(
+            "Vista rápida"
+        )
+
+
+        g1, g2 = (
+            st.columns(2)
+        )
+
+
+        # ----------------------------------------------------
+        # CONSUMO POR TIPO
+        # ----------------------------------------------------
+
+        with g1:
+
+            st.markdown(
+                "#### Consumo por tipo de uso"
             )
 
 
@@ -1436,19 +1454,22 @@ if opcion == "🏠 Inicio":
                 df
 
                 .groupby(
+
                     "Tipo de uso",
+
                     as_index=False
+
                 )
 
                 [
-                    "Consumo mensual (m³)"
+                    "Consumo del periodo (m³)"
                 ]
 
                 .sum()
 
                 .sort_values(
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     ascending=False
 
@@ -1461,36 +1482,47 @@ if opcion == "🏠 Inicio":
 
                 por_tipo,
 
-                x="Tipo de uso",
+                x=
+                    "Tipo de uso",
 
-                y="Consumo mensual (m³)",
+                y=
+                    "Consumo del periodo (m³)",
 
                 use_container_width=True
 
             )
 
 
-        with c2:
+        # ----------------------------------------------------
+        # CONSUMO POR SECTOR
+        # ----------------------------------------------------
 
-            st.subheader(
-                "📍 Sectores con mayor consumo"
+        with g2:
+
+            st.markdown(
+                "#### Consumo por sector/comunidad"
             )
 
 
-            temp = df.copy()
+            sectores = (
+                df.copy()
+            )
 
 
-            temp[
+            sectores[
                 "Sector / comunidad"
             ] = (
 
-                temp[
+                sectores[
                     "Sector / comunidad"
                 ]
 
                 .replace(
+
                     "",
+
                     "Sin especificar"
+
                 )
 
             )
@@ -1498,22 +1530,25 @@ if opcion == "🏠 Inicio":
 
             por_sector = (
 
-                temp
+                sectores
 
                 .groupby(
+
                     "Sector / comunidad",
+
                     as_index=False
+
                 )
 
                 [
-                    "Consumo mensual (m³)"
+                    "Consumo del periodo (m³)"
                 ]
 
                 .sum()
 
                 .sort_values(
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     ascending=False
 
@@ -1528,39 +1563,46 @@ if opcion == "🏠 Inicio":
 
                 por_sector,
 
-                x="Sector / comunidad",
+                x=
+                    "Sector / comunidad",
 
-                y="Consumo mensual (m³)",
+                y=
+                    "Consumo del periodo (m³)",
 
                 use_container_width=True
 
             )
 
 
-        # =====================================
-        # ALERTA DEL SISTEMA
-        # =====================================
+        # ----------------------------------------------------
+        # ALERTAS
+        # ----------------------------------------------------
 
         st.subheader(
-            "🚨 Lectura rápida del sistema"
+            "🚨 Alertas"
         )
 
 
-        domesticos = df[
+        domesticos = (
 
             df[
-                "Tipo de uso"
+
+                df[
+                    "Tipo de uso"
+                ]
+
+                ==
+                "Doméstico"
+
             ]
 
-            ==
-            "Doméstico"
-
-        ]
+        )
 
 
         altos = int(
 
             (
+
                 domesticos[
                     "Nivel"
                 ]
@@ -1568,7 +1610,9 @@ if opcion == "🏠 Inicio":
                 ==
                 "ALTO"
 
-            ).sum()
+            )
+
+            .sum()
 
         )
 
@@ -1577,29 +1621,32 @@ if opcion == "🏠 Inicio":
 
             st.warning(
 
-                f"Se detectaron {altos} "
-                f"registro(s) domésticos "
-                f"con consumo alto. "
-
-                "Puedes revisarlos desde "
-                "el Explorador."
+                f"Se detectaron "
+                f"{altos} registro(s) "
+                f"domésticos clasificados "
+                f"como consumo alto "
+                f"dentro de los criterios "
+                f"referenciales "
+                f"del prototipo."
 
             )
+
 
         else:
 
             st.success(
 
-                "No existen registros domésticos "
-                "clasificados actualmente "
-                "como consumo alto."
+                "No existen registros "
+                "domésticos clasificados "
+                "actualmente como "
+                "consumo alto."
 
             )
 
 
-        # =====================================
+        # ----------------------------------------------------
         # MAYORES CONSUMOS
-        # =====================================
+        # ----------------------------------------------------
 
         st.subheader(
             "🔥 Mayores consumos registrados"
@@ -1612,7 +1659,7 @@ if opcion == "🏠 Inicio":
 
             .sort_values(
 
-                "Consumo mensual (m³)",
+                "Consumo del periodo (m³)",
 
                 ascending=False
 
@@ -1624,11 +1671,13 @@ if opcion == "🏠 Inicio":
 
                     "Código",
 
+                    "Fecha",
+
                     "Sector / comunidad",
 
                     "Tipo de uso",
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     "Nivel"
 
@@ -1636,7 +1685,7 @@ if opcion == "🏠 Inicio":
 
             ]
 
-            .head(5)
+            .head(7)
 
         )
 
@@ -1658,14 +1707,14 @@ if opcion == "🏠 Inicio":
 
 elif opcion == "➕ Nuevo registro":
 
-    st.header(
-        "➕ Nuevo registro"
+    st.title(
+        "Nuevo registro"
     )
 
 
     st.caption(
 
-        "Puedes registrar hogares, comercios, "
+        "Registra hogares, comercios, "
         "instituciones, centros educativos, "
         "riego u otros tipos de uso."
 
@@ -1673,8 +1722,11 @@ elif opcion == "➕ Nuevo registro":
 
 
     with st.form(
-        "registro_form",
+
+        "form_registro",
+
         clear_on_submit=False
+
     ):
 
 
@@ -1683,9 +1735,9 @@ elif opcion == "➕ Nuevo registro":
         )
 
 
-        # -------------------------------------
+        # ----------------------------------------------------
         # COLUMNA 1
-        # -------------------------------------
+        # ----------------------------------------------------
 
         with c1:
 
@@ -1694,7 +1746,7 @@ elif opcion == "➕ Nuevo registro":
                 "🆔 Código o identificador",
 
                 placeholder=
-                "Ejemplo: U001"
+                    "Ejemplo: U001"
 
             )
 
@@ -1705,7 +1757,7 @@ elif opcion == "➕ Nuevo registro":
                     "📅 Fecha",
 
                     value=
-                    date.today()
+                        date.today()
 
                 )
             )
@@ -1722,9 +1774,9 @@ elif opcion == "➕ Nuevo registro":
             )
 
 
-        # -------------------------------------
+        # ----------------------------------------------------
         # COLUMNA 2
-        # -------------------------------------
+        # ----------------------------------------------------
 
         with c2:
 
@@ -1733,7 +1785,10 @@ elif opcion == "➕ Nuevo registro":
                 "📍 Sector / comunidad",
 
                 placeholder=
-                "Ej.: Centro, La Esperanza, Shaullo..."
+
+                    "Ej.: Centro, "
+                    "La Esperanza, "
+                    "Shaullo..."
 
             )
 
@@ -1743,32 +1798,36 @@ elif opcion == "➕ Nuevo registro":
                 "🧭 Zona / referencia",
 
                 placeholder=
-                "Dato opcional"
+                    "Dato opcional"
 
             )
 
 
-            personas = st.number_input(
+            personas = (
+                st.number_input(
 
-                "👥 Personas o usuarios de referencia",
+                    "👥 Personas o usuarios "
+                    "de referencia",
 
-                min_value=1,
+                    min_value=1,
 
-                max_value=5000,
+                    max_value=5000,
 
-                value=4,
+                    value=4,
 
-                help=
+                    help=
 
-                "Para uso doméstico corresponde "
-                "al número de habitantes."
+                        "En uso doméstico "
+                        "corresponde al número "
+                        "de habitantes."
 
+                )
             )
 
 
-        # -------------------------------------
+        # ----------------------------------------------------
         # COLUMNA 3
-        # -------------------------------------
+        # ----------------------------------------------------
 
         with c3:
 
@@ -1800,7 +1859,8 @@ elif opcion == "➕ Nuevo registro":
 
             tarifa = st.number_input(
 
-                "💰 Tarifa referencial (S/ por m³)",
+                "💰 Tarifa referencial "
+                "(S/ por m³)",
 
                 min_value=0.0,
 
@@ -1810,8 +1870,9 @@ elif opcion == "➕ Nuevo registro":
 
                 help=
 
-                "Puedes dejarlo en cero "
-                "si no deseas calcular costos."
+                    "Déjalo en cero "
+                    "si no deseas "
+                    "estimar costos."
 
             )
 
@@ -1823,9 +1884,9 @@ elif opcion == "➕ Nuevo registro":
 
                 placeholder=
 
-                "Ej.: presencia de fugas, "
-                "condiciones particulares, "
-                "notas de campo..."
+                    "Ej.: presencia de fugas, "
+                    "condiciones particulares, "
+                    "notas de campo..."
 
             )
         )
@@ -1842,9 +1903,9 @@ elif opcion == "➕ Nuevo registro":
         )
 
 
-    # =========================================
+    # --------------------------------------------------------
     # PROCESAR
-    # =========================================
+    # --------------------------------------------------------
 
     if guardar:
 
@@ -1863,7 +1924,7 @@ elif opcion == "➕ Nuevo registro":
 
             st.error(
 
-                "⚠️ Ingresa un código "
+                "Ingresa un código "
                 "o identificador."
 
             )
@@ -1871,30 +1932,20 @@ elif opcion == "➕ Nuevo registro":
 
         else:
 
-            (
+            resultado = (
+                analizar_consumo(
 
-                consumo_diario,
+                    personas,
 
-                litros_persona,
+                    consumo,
 
-                indice_log,
+                    dias,
 
-                nivel,
+                    tipo_uso,
 
-                costo
+                    tarifa
 
-            ) = analizar_consumo(
-
-                personas,
-
-                consumo,
-
-                dias,
-
-                tipo_uso,
-
-                tarifa
-
+                )
             )
 
 
@@ -1908,7 +1959,9 @@ elif opcion == "➕ Nuevo registro":
                             codigo_limpio,
 
                         "Fecha":
+
                             fecha_registro
+
                             .strftime(
                                 "%Y-%m-%d"
                             ),
@@ -1925,7 +1978,7 @@ elif opcion == "➕ Nuevo registro":
                         "Personas":
                             int(personas),
 
-                        "Consumo mensual (m³)":
+                        "Consumo del periodo (m³)":
                             float(consumo),
 
                         "Días":
@@ -1935,30 +1988,56 @@ elif opcion == "➕ Nuevo registro":
                             float(tarifa),
 
                         "Consumo diario (m³)":
+
                             round(
-                                consumo_diario,
+
+                                resultado[
+                                    "consumo_diario"
+                                ],
+
                                 4
+
                             ),
 
                         "Consumo por persona (L/día)":
+
                             round(
-                                litros_persona,
+
+                                resultado[
+                                    "litros_persona_dia"
+                                ],
+
                                 2
+
                             ),
 
                         "Índice logarítmico":
+
                             round(
-                                indice_log,
+
+                                resultado[
+                                    "indice_log"
+                                ],
+
                                 5
+
                             ),
 
                         "Nivel":
-                            nivel,
+                            resultado[
+                                "nivel"
+                            ],
 
-                        "Costo mensual (S/)":
+                        "Costo del periodo (S/)":
+
                             round(
-                                costo,
+
+                                resultado[
+                                    "costo"
+                                ],
+
                                 2
+
                             ),
 
                         "Observaciones":
@@ -1994,16 +2073,13 @@ elif opcion == "➕ Nuevo registro":
 
 
             st.success(
-
-                "✅ Registro guardado "
-                "correctamente."
-
+                "✅ Registro guardado correctamente."
             )
 
 
-            # =================================
+            # ------------------------------------------------
             # RESULTADOS
-            # =================================
+            # ------------------------------------------------
 
             r1, r2, r3, r4 = (
                 st.columns(4)
@@ -2014,7 +2090,7 @@ elif opcion == "➕ Nuevo registro":
 
                 "💧 Consumo diario",
 
-                f"{consumo_diario:.3f} m³"
+                f'{resultado["consumo_diario"]:.3f} m³'
 
             )
 
@@ -2023,7 +2099,7 @@ elif opcion == "➕ Nuevo registro":
 
                 "👤 Referencia individual",
 
-                f"{litros_persona:.1f} L/día"
+                f'{resultado["litros_persona_dia"]:.1f} L/día'
 
             )
 
@@ -2032,7 +2108,7 @@ elif opcion == "➕ Nuevo registro":
 
                 "🔢 Índice logarítmico",
 
-                f"{indice_log:.5f}"
+                f'{resultado["indice_log"]:.5f}'
 
             )
 
@@ -2041,29 +2117,45 @@ elif opcion == "➕ Nuevo registro":
 
                 "💰 Costo estimado",
 
-                f"S/ {costo:.2f}"
+                f'S/ {resultado["costo"]:.2f}'
 
             )
 
 
+            # ------------------------------------------------
+            # NIVEL
+            # ------------------------------------------------
+
             if tipo_uso == "Doméstico":
 
-                if nivel == "BAJO":
+                if (
+                    resultado[
+                        "nivel"
+                    ]
+                    ==
+                    "BAJO"
+                ):
 
                     st.success(
 
-                        "🟢 Clasificación doméstica: "
-                        "CONSUMO BAJO"
+                        "🟢 Clasificación "
+                        "doméstica: BAJO"
 
                     )
 
 
-                elif nivel == "MODERADO":
+                elif (
+                    resultado[
+                        "nivel"
+                    ]
+                    ==
+                    "MODERADO"
+                ):
 
                     st.warning(
 
-                        "🟡 Clasificación doméstica: "
-                        "CONSUMO MODERADO"
+                        "🟡 Clasificación "
+                        "doméstica: MODERADO"
 
                     )
 
@@ -2072,8 +2164,8 @@ elif opcion == "➕ Nuevo registro":
 
                     st.error(
 
-                        "🔴 Clasificación doméstica: "
-                        "CONSUMO ALTO"
+                        "🔴 Clasificación "
+                        "doméstica: ALTO"
 
                     )
 
@@ -2082,68 +2174,79 @@ elif opcion == "➕ Nuevo registro":
 
                 st.info(
 
-                    "ℹ️ En usos no domésticos "
-                    "AquaLog BI presenta los "
-                    "indicadores matemáticos, "
-                    "pero no aplica los rangos "
-                    "domésticos de consumo "
+                    "En usos no domésticos "
+                    "el sistema muestra "
+                    "los indicadores, "
+                    "pero no aplica "
+                    "los rangos domésticos "
                     "por persona."
 
                 )
 
 
-            st.divider()
-
-
-            # =================================
+            # ------------------------------------------------
             # DESARROLLO MATEMÁTICO
-            # =================================
+            # ------------------------------------------------
 
-            st.subheader(
-                "🧮 Análisis matemático"
-            )
+            with st.expander(
+                "🧮 Ver desarrollo matemático"
+            ):
 
-
-            st.latex(
-                r"C_p=\frac{V}{P\times D}"
-            )
-
-
-            consumo_persona_m3 = (
-
-                consumo /
-
-                (
-                    personas *
-                    dias
+                st.latex(
+                    r"C_p=\frac{V}{P\times D}"
                 )
 
+
+                st.write(
+
+                    f'**Cₚ = '
+                    f'{consumo:.2f} / '
+                    f'({personas} × {dias}) '
+                    f'= '
+                    f'{resultado["consumo_persona_m3_dia"]:.5f} '
+                    f'm³/persona/día**'
+
+                )
+
+
+                st.latex(
+                    r"I_L=\log_{10}(1+C_p)"
+                )
+
+
+                st.write(
+
+                    f'**Iₗ = '
+                    f'{resultado["indice_log"]:.5f}**'
+
+                )
+
+
+            # ------------------------------------------------
+            # RECOMENDACIONES
+            # ------------------------------------------------
+
+            st.subheader(
+                "💡 Recomendaciones para este registro"
             )
 
 
-            st.write(
+            for titulo, texto in (
+                recomendaciones(
 
-                f"**Cₚ = "
-                f"{consumo:.2f} / "
-                f"({personas} × {dias}) "
-                f"= "
-                f"{consumo_persona_m3:.5f} "
-                f"m³/persona/día**"
+                    tipo_uso,
 
-            )
+                    resultado[
+                        "nivel"
+                    ]
 
+                )
+            ):
 
-            st.latex(
-                r"I_L=\log_{10}(1+C_p)"
-            )
-
-
-            st.write(
-
-                f"**Iₗ = "
-                f"{indice_log:.5f}**"
-
-            )
+                tip_card(
+                    titulo,
+                    texto
+                )
 
 
 # ============================================================
@@ -2152,45 +2255,38 @@ elif opcion == "➕ Nuevo registro":
 
 elif opcion == "🔎 Explorador":
 
-    st.header(
-        "🔎 Explorador de registros"
+    st.title(
+        "Explorador de registros"
     )
 
 
     if df.empty:
 
         st.info(
-
-            "No existen datos "
-            "para explorar."
-
+            "No existen datos para explorar."
         )
 
 
     else:
 
-        # =====================================
+        # ----------------------------------------------------
         # FILTROS
-        # =====================================
+        # ----------------------------------------------------
 
         f1, f2, f3 = (
             st.columns(3)
         )
 
 
-        sectores = (
-
-            ["Todos"]
-
-            +
+        sectores_disponibles = (
 
             sorted(
 
                 [
 
-                    valor
+                    x
 
-                    for valor in (
+                    for x in (
 
                         df[
                             "Sector / comunidad"
@@ -2200,9 +2296,11 @@ elif opcion == "🔎 Explorador":
 
                         .unique()
 
+                        .tolist()
+
                     )
 
-                    if valor.strip()
+                    if x.strip()
 
                 ]
 
@@ -2211,11 +2309,7 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        tipos = (
-
-            ["Todos"]
-
-            +
+        tipos_disponibles = (
 
             sorted(
 
@@ -2234,11 +2328,7 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        niveles = (
-
-            ["Todos"]
-
-            +
+        niveles_disponibles = (
 
             sorted(
 
@@ -2264,7 +2354,11 @@ elif opcion == "🔎 Explorador":
 
                     "📍 Sector",
 
-                    sectores
+                    [
+                        "Todos"
+                    ]
+                    +
+                    sectores_disponibles
 
                 )
             )
@@ -2277,7 +2371,11 @@ elif opcion == "🔎 Explorador":
 
                     "🏷️ Tipo de uso",
 
-                    tipos
+                    [
+                        "Todos"
+                    ]
+                    +
+                    tipos_disponibles
 
                 )
             )
@@ -2290,7 +2388,11 @@ elif opcion == "🔎 Explorador":
 
                     "🚦 Nivel",
 
-                    niveles
+                    [
+                        "Todos"
+                    ]
+                    +
+                    niveles_disponibles
 
                 )
             )
@@ -2303,7 +2405,7 @@ elif opcion == "🔎 Explorador":
                 "sector o zona",
 
                 placeholder=
-                "Escribe una palabra..."
+                    "Escribe una palabra..."
 
             )
         )
@@ -2314,7 +2416,11 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        if sector_filtro != "Todos":
+        if (
+            sector_filtro
+            !=
+            "Todos"
+        ):
 
             filtrado = filtrado[
 
@@ -2328,7 +2434,11 @@ elif opcion == "🔎 Explorador":
             ]
 
 
-        if tipo_filtro != "Todos":
+        if (
+            tipo_filtro
+            !=
+            "Todos"
+        ):
 
             filtrado = filtrado[
 
@@ -2342,7 +2452,11 @@ elif opcion == "🔎 Explorador":
             ]
 
 
-        if nivel_filtro != "Todos":
+        if (
+            nivel_filtro
+            !=
+            "Todos"
+        ):
 
             filtrado = filtrado[
 
@@ -2454,9 +2568,9 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        # =====================================
-        # DESCARGAR
-        # =====================================
+        # ----------------------------------------------------
+        # DESCARGAR CSV
+        # ----------------------------------------------------
 
         csv = (
 
@@ -2490,29 +2604,33 @@ elif opcion == "🔎 Explorador":
         )
 
 
+        # ----------------------------------------------------
+        # HISTORIAL
+        # ----------------------------------------------------
+
         st.divider()
 
 
-        # =====================================
-        # HISTORIAL
-        # =====================================
-
         st.subheader(
-            "👤 Historial de un usuario o punto"
+            "👤 Historial por código"
         )
 
 
-        codigos = sorted(
+        codigos = (
 
-            df[
-                "Código"
-            ]
+            sorted(
 
-            .astype(str)
+                df[
+                    "Código"
+                ]
 
-            .unique()
+                .astype(str)
 
-            .tolist()
+                .unique()
+
+                .tolist()
+
+            )
 
         )
 
@@ -2528,39 +2646,84 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        historial = df[
+        historial = (
 
             df[
-                "Código"
+
+                df[
+                    "Código"
+                ]
+
+                .astype(str)
+
+                ==
+                codigo_seleccionado
+
             ]
 
-            .astype(str)
+            .copy()
 
-            ==
-            codigo_seleccionado
-
-        ].copy()
+        )
 
 
         historial[
             "Fecha"
-        ] = pd.to_datetime(
+        ] = (
 
-            historial[
-                "Fecha"
-            ],
+            pd.to_datetime(
 
-            errors="coerce"
+                historial[
+                    "Fecha"
+                ],
+
+                errors=
+                    "coerce"
+
+            )
 
         )
 
 
         historial = (
+
             historial
 
             .sort_values(
                 "Fecha"
             )
+
+        )
+
+
+        h1, h2, h3 = (
+            st.columns(3)
+        )
+
+
+        h1.metric(
+
+            "Registros",
+
+            len(historial)
+
+        )
+
+
+        h2.metric(
+
+            "Consumo promedio",
+
+            f'{historial["Consumo del periodo (m³)"].mean():.2f} m³'
+
+        )
+
+
+        h3.metric(
+
+            "Último consumo",
+
+            f'{historial["Consumo del periodo (m³)"].iloc[-1]:.2f} m³'
+
         )
 
 
@@ -2570,9 +2733,11 @@ elif opcion == "🔎 Explorador":
 
                 historial,
 
-                x="Fecha",
+                x=
+                    "Fecha",
 
-                y="Consumo mensual (m³)",
+                y=
+                    "Consumo del periodo (m³)",
 
                 use_container_width=True
 
@@ -2600,22 +2765,23 @@ elif opcion == "🔎 Explorador":
         )
 
 
-        # =====================================
-        # IMPORTAR DATOS
-        # =====================================
+        # ----------------------------------------------------
+        # IMPORTAR CSV
+        # ----------------------------------------------------
 
         st.divider()
 
 
         st.subheader(
-            "📤 Importar base de datos"
+            "📤 Importar CSV"
         )
 
 
         archivo_subido = (
             st.file_uploader(
 
-                "Selecciona un archivo CSV",
+                "Selecciona un archivo CSV "
+                "compatible con AquaLog BI",
 
                 type=[
                     "csv"
@@ -2630,16 +2796,15 @@ elif opcion == "🔎 Explorador":
             try:
 
                 base_importada = (
-                    pd.read_csv(
-                        archivo_subido
-                    )
-                )
 
-
-                base_importada = (
                     normalizar_df(
-                        base_importada
+
+                        pd.read_csv(
+                            archivo_subido
+                        )
+
                     )
+
                 )
 
 
@@ -2669,14 +2834,6 @@ elif opcion == "🔎 Explorador":
                     )
 
 
-                    st.success(
-
-                        "Base de datos "
-                        "actualizada correctamente."
-
-                    )
-
-
                     st.rerun()
 
 
@@ -2690,32 +2847,52 @@ elif opcion == "🔎 Explorador":
                 )
 
 
-        # =====================================
-        # ELIMINAR
-        # =====================================
+        # ----------------------------------------------------
+        # ELIMINAR REGISTRO
+        # ----------------------------------------------------
 
         st.divider()
 
 
         st.subheader(
-            "🗑️ Eliminar registro"
+            "🗑️ Eliminar un registro"
         )
 
 
-        codigo_borrar = (
+        opciones_borrado = (
+
+            df
+
+            .reset_index()
+
+            .apply(
+
+                lambda fila:
+
+                    f'{fila["index"]} | '
+                    f'{fila["Código"]} | '
+                    f'{fila["Fecha"]} | '
+                    f'{fila["Consumo del periodo (m³)"]:.2f} m³',
+
+                axis=1
+
+            )
+
+            .tolist()
+
+        )
+
+
+        registro_borrar = (
             st.selectbox(
 
-                "Código",
+                "Selecciona el registro",
 
                 [
                     "Seleccionar..."
                 ]
-
                 +
-                codigos,
-
-                key=
-                    "codigo_borrar"
+                opciones_borrado
 
             )
         )
@@ -2723,8 +2900,7 @@ elif opcion == "🔎 Explorador":
 
         if st.button(
 
-            "🗑️ Eliminar último registro "
-            "guardado de ese código",
+            "🗑️ ELIMINAR REGISTRO",
 
             use_container_width=True
 
@@ -2732,7 +2908,7 @@ elif opcion == "🔎 Explorador":
 
 
             if (
-                codigo_borrar
+                registro_borrar
                 ==
                 "Seleccionar..."
             ):
@@ -2740,30 +2916,21 @@ elif opcion == "🔎 Explorador":
                 st.warning(
 
                     "Selecciona "
-                    "un código."
+                    "un registro."
 
                 )
 
 
             else:
 
-                candidatos = df[
+                indice_real = int(
 
-                    df[
-                        "Código"
-                    ]
+                    registro_borrar
 
-                    .astype(str)
+                    .split(
+                        " | "
+                    )[0]
 
-                    ==
-                    codigo_borrar
-
-                ]
-
-
-                indice = (
-                    candidatos
-                    .index[-1]
                 )
 
 
@@ -2772,7 +2939,8 @@ elif opcion == "🔎 Explorador":
                     df
 
                     .drop(
-                        index=indice
+                        index=
+                            indice_real
                     )
 
                     .reset_index(
@@ -2808,17 +2976,16 @@ elif opcion == "🔎 Explorador":
 
 elif opcion == "🎯 Simulador de ahorro":
 
-    st.header(
-        "🎯 Simulador de ahorro"
+    st.title(
+        "Simulador de ahorro"
     )
 
 
     st.write(
 
-        "Prueba diferentes escenarios "
-        "de reducción del consumo y "
-        "observa cuánto agua y dinero "
-        "podrían ahorrarse."
+        "Prueba metas de reducción "
+        "y observa el posible ahorro "
+        "de agua y dinero."
 
     )
 
@@ -2849,9 +3016,9 @@ elif opcion == "🎯 Simulador de ahorro":
     )
 
 
-    # =========================================
-    # REGISTRO EXISTENTE
-    # =========================================
+    # --------------------------------------------------------
+    # USAR REGISTRO EXISTENTE
+    # --------------------------------------------------------
 
     if (
         modo
@@ -2863,9 +3030,13 @@ elif opcion == "🎯 Simulador de ahorro":
 
 
         opciones_df = (
-            df.reset_index(
+
+            df
+
+            .reset_index(
                 drop=True
             )
+
         )
 
 
@@ -2877,9 +3048,9 @@ elif opcion == "🎯 Simulador de ahorro":
 
                 lambda fila:
 
-                f'{fila["Código"]} | '
-                f'{fila["Fecha"]} | '
-                f'{fila["Consumo mensual (m³)"]:.2f} m³',
+                    f'{fila["Código"]} | '
+                    f'{fila["Fecha"]} | '
+                    f'{fila["Consumo del periodo (m³)"]:.2f} m³',
 
                 axis=1
 
@@ -2902,25 +3073,31 @@ elif opcion == "🎯 Simulador de ahorro":
 
 
         posicion = (
+
             opciones
+
             .index(
                 seleccion
             )
+
         )
 
 
         fila = (
+
             opciones_df
+
             .iloc[
                 posicion
             ]
+
         )
 
 
         consumo_base = float(
 
             fila[
-                "Consumo mensual (m³)"
+                "Consumo del periodo (m³)"
             ]
 
         )
@@ -2944,18 +3121,18 @@ elif opcion == "🎯 Simulador de ahorro":
         )
 
 
-    # =========================================
+    # --------------------------------------------------------
     # MANUAL
-    # =========================================
+    # --------------------------------------------------------
 
     else:
 
-        c1, c2 = (
+        s1, s2 = (
             st.columns(2)
         )
 
 
-        with c1:
+        with s1:
 
             consumo_base = (
                 st.number_input(
@@ -2972,7 +3149,7 @@ elif opcion == "🎯 Simulador de ahorro":
             )
 
 
-        with c2:
+        with s2:
 
             tarifa_base = (
                 st.number_input(
@@ -2986,30 +3163,32 @@ elif opcion == "🎯 Simulador de ahorro":
                     step=0.1,
 
                     key=
-                        "tarifa_simulador"
+                        "tarifa_sim"
 
                 )
             )
 
 
-    # =========================================
+    # --------------------------------------------------------
     # META
-    # =========================================
+    # --------------------------------------------------------
 
-    reduccion = st.slider(
+    reduccion = (
+        st.slider(
 
-        "🎯 Meta de reducción",
+            "🎯 Meta de reducción",
 
-        min_value=0,
+            min_value=0,
 
-        max_value=50,
+            max_value=50,
 
-        value=15,
+            value=15,
 
-        step=1,
+            step=1,
 
-        format="%d%%"
+            format="%d%%"
 
+        )
     )
 
 
@@ -3057,9 +3236,9 @@ elif opcion == "🎯 Simulador de ahorro":
     )
 
 
-    # =========================================
-    # RESULTADOS
-    # =========================================
+    # --------------------------------------------------------
+    # MÉTRICAS
+    # --------------------------------------------------------
 
     c1, c2, c3, c4 = (
         st.columns(4)
@@ -3082,15 +3261,14 @@ elif opcion == "🎯 Simulador de ahorro":
         f"{nuevo_consumo:.2f} m³",
 
         delta=
-
-        f"-{ahorro_m3:.2f} m³"
+            f"-{ahorro_m3:.2f} m³"
 
     )
 
 
     c3.metric(
 
-        "💙 Ahorro por periodo",
+        "💙 Ahorro/periodo",
 
         f"{ahorro_m3:.2f} m³"
 
@@ -3099,7 +3277,7 @@ elif opcion == "🎯 Simulador de ahorro":
 
     c4.metric(
 
-        "🌎 Ahorro anual estimado",
+        "🌎 Ahorro anual",
 
         f"{ahorro_anual:.2f} m³"
 
@@ -3110,10 +3288,10 @@ elif opcion == "🎯 Simulador de ahorro":
 
         st.success(
 
-            f"💰 Con una reducción del "
+            f"Con una reducción del "
             f"{reduccion}% en {etiqueta}, "
             f"el ahorro económico estimado "
-            f"sería de S/ {ahorro_soles:.2f} "
+            f"sería S/ {ahorro_soles:.2f} "
             f"por periodo y aproximadamente "
             f"S/ {ahorro_soles_anual:.2f} "
             f"al año."
@@ -3125,63 +3303,84 @@ elif opcion == "🎯 Simulador de ahorro":
 
         st.info(
 
-            f"💧 Con una reducción del "
-            f"{reduccion}%, podrías ahorrar "
+            f"Con una reducción del "
+            f"{reduccion}% podrías ahorrar "
             f"aproximadamente "
             f"{ahorro_anual:.2f} m³ "
-            f"de agua al año."
+            f"al año."
 
         )
 
 
-    # =========================================
+    # --------------------------------------------------------
     # ESCENARIOS
-    # =========================================
+    # --------------------------------------------------------
 
     st.subheader(
         "📊 Comparación de escenarios"
     )
 
 
+    porcentajes = [
+
+        0,
+
+        5,
+
+        10,
+
+        15,
+
+        20,
+
+        25,
+
+        reduccion
+
+    ]
+
+
+    etiquetas = [
+
+        "Actual",
+
+        "Ahorro 5%",
+
+        "Ahorro 10%",
+
+        "Ahorro 15%",
+
+        "Ahorro 20%",
+
+        "Ahorro 25%",
+
+        f"Meta {reduccion}%"
+
+    ]
+
+
     escenarios = pd.DataFrame(
 
         {
 
-            "Escenario": [
+            "Escenario":
+                etiquetas,
 
-                "Actual",
+            "Consumo (m³)":
 
-                "Ahorro 5%",
+                [
 
-                "Ahorro 10%",
+                    consumo_base *
 
-                "Ahorro 15%",
+                    (
+                        1 -
+                        porcentaje / 100
+                    )
 
-                "Ahorro 20%",
+                    for porcentaje
+                    in porcentajes
 
-                f"Meta {reduccion}%"
-
-            ],
-
-            "Consumo (m³)": [
-
-                consumo_base,
-
-                consumo_base *
-                0.95,
-
-                consumo_base *
-                0.90,
-
-                consumo_base *
-                0.85,
-
-                consumo_base *
-                0.80,
-
-                nuevo_consumo
-
-            ]
+                ]
 
         }
 
@@ -3203,14 +3402,25 @@ elif opcion == "🎯 Simulador de ahorro":
     )
 
 
+    st.dataframe(
+
+        escenarios,
+
+        use_container_width=True,
+
+        hide_index=True
+
+    )
+
+
 # ============================================================
 # ANÁLISIS
 # ============================================================
 
 elif opcion == "📈 Análisis":
 
-    st.header(
-        "📈 Análisis dinámico"
+    st.title(
+        "Análisis dinámico"
     )
 
 
@@ -3239,6 +3449,8 @@ elif opcion == "📈 Análisis":
                     "Tipo de uso"
                 ]
 
+                .astype(str)
+
                 .unique()
 
                 .tolist()
@@ -3254,9 +3466,9 @@ elif opcion == "📈 Análisis":
 
                 [
 
-                    valor
+                    x
 
-                    for valor in (
+                    for x in (
 
                         df[
                             "Sector / comunidad"
@@ -3266,9 +3478,11 @@ elif opcion == "📈 Análisis":
 
                         .unique()
 
+                        .tolist()
+
                     )
 
-                    if valor.strip()
+                    if x.strip()
 
                 ]
 
@@ -3311,17 +3525,23 @@ elif opcion == "📈 Análisis":
             )
 
 
-        analisis = df[
+        analisis = (
 
             df[
-                "Tipo de uso"
+
+                df[
+                    "Tipo de uso"
+                ]
+
+                .isin(
+                    tipos_seleccionados
+                )
+
             ]
 
-            .isin(
-                tipos_seleccionados
-            )
+            .copy()
 
-        ].copy()
+        )
 
 
         if (
@@ -3355,9 +3575,54 @@ elif opcion == "📈 Análisis":
 
         else:
 
-            # =================================
-            # TIPO DE USO
-            # =================================
+            # ------------------------------------------------
+            # KPIs
+            # ------------------------------------------------
+
+            k1, k2, k3, k4 = (
+                st.columns(4)
+            )
+
+
+            k1.metric(
+
+                "Registros analizados",
+
+                len(analisis)
+
+            )
+
+
+            k2.metric(
+
+                "Consumo total",
+
+                f'{analisis["Consumo del periodo (m³)"].sum():.2f} m³'
+
+            )
+
+
+            k3.metric(
+
+                "Promedio",
+
+                f'{analisis["Consumo del periodo (m³)"].mean():.2f} m³'
+
+            )
+
+
+            k4.metric(
+
+                "Costo total",
+
+                f'S/ {analisis["Costo del periodo (S/)"].sum():.2f}'
+
+            )
+
+
+            # ------------------------------------------------
+            # POR TIPO
+            # ------------------------------------------------
 
             st.subheader(
                 "📊 Consumo por tipo de uso"
@@ -3377,14 +3642,14 @@ elif opcion == "📈 Análisis":
                 )
 
                 [
-                    "Consumo mensual (m³)"
+                    "Consumo del periodo (m³)"
                 ]
 
                 .sum()
 
                 .sort_values(
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     ascending=False
 
@@ -3401,19 +3666,19 @@ elif opcion == "📈 Análisis":
                     "Tipo de uso",
 
                 y=
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                 use_container_width=True
 
             )
 
 
-            # =================================
-            # SECTOR
-            # =================================
+            # ------------------------------------------------
+            # POR SECTOR
+            # ------------------------------------------------
 
             st.subheader(
-                "📍 Consumo por sector / comunidad"
+                "📍 Consumo por sector/comunidad"
             )
 
 
@@ -3454,14 +3719,14 @@ elif opcion == "📈 Análisis":
                 )
 
                 [
-                    "Consumo mensual (m³)"
+                    "Consumo del periodo (m³)"
                 ]
 
                 .sum()
 
                 .sort_values(
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     ascending=False
 
@@ -3478,16 +3743,16 @@ elif opcion == "📈 Análisis":
                     "Sector / comunidad",
 
                 y=
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                 use_container_width=True
 
             )
 
 
-            # =================================
-            # EVOLUCIÓN
-            # =================================
+            # ------------------------------------------------
+            # EVOLUCIÓN TEMPORAL
+            # ------------------------------------------------
 
             st.subheader(
                 "🗓️ Evolución temporal"
@@ -3501,13 +3766,18 @@ elif opcion == "📈 Análisis":
 
             evolucion[
                 "Fecha"
-            ] = pd.to_datetime(
+            ] = (
 
-                evolucion[
-                    "Fecha"
-                ],
+                pd.to_datetime(
 
-                errors="coerce"
+                    evolucion[
+                        "Fecha"
+                    ],
+
+                    errors=
+                        "coerce"
+
+                )
 
             )
 
@@ -3531,7 +3801,7 @@ elif opcion == "📈 Análisis":
                 )
 
                 [
-                    "Consumo mensual (m³)"
+                    "Consumo del periodo (m³)"
                 ]
 
                 .sum()
@@ -3549,18 +3819,20 @@ elif opcion == "📈 Análisis":
 
                     evolucion,
 
-                    x="Fecha",
+                    x=
+                        "Fecha",
 
-                    y="Consumo mensual (m³)",
+                    y=
+                        "Consumo del periodo (m³)",
 
                     use_container_width=True
 
                 )
 
 
-            # =================================
+            # ------------------------------------------------
             # RANKING
-            # =================================
+            # ------------------------------------------------
 
             st.subheader(
                 "🏆 Ranking de consumo"
@@ -3573,7 +3845,7 @@ elif opcion == "📈 Análisis":
 
                 .sort_values(
 
-                    "Consumo mensual (m³)",
+                    "Consumo del periodo (m³)",
 
                     ascending=False
 
@@ -3591,7 +3863,7 @@ elif opcion == "📈 Análisis":
 
                         "Tipo de uso",
 
-                        "Consumo mensual (m³)",
+                        "Consumo del periodo (m³)",
 
                         "Consumo por persona (L/día)",
 
@@ -3623,21 +3895,21 @@ elif opcion == "📈 Análisis":
 
 elif opcion == "💡 Recomendaciones":
 
-    st.header(
-        "💡 Recomendaciones inteligentes"
+    st.title(
+        "Recomendaciones inteligentes"
     )
 
 
     st.write(
 
         "Selecciona el tipo de uso "
-        "para recibir recomendaciones "
+        "para obtener recomendaciones "
         "más apropiadas."
 
     )
 
 
-    tipo_recomendacion = (
+    tipo_rec = (
         st.selectbox(
 
             "🏷️ Tipo de uso",
@@ -3648,236 +3920,43 @@ elif opcion == "💡 Recomendaciones":
     )
 
 
-    recomendaciones = {
+    nivel_rec = None
 
 
-        "Doméstico": [
+    if tipo_rec == "Doméstico":
 
-            (
-                "🚰 Cierra los caños",
+        nivel_rec = (
+            st.selectbox(
 
-                "Evita mantener el agua "
-                "corriendo cuando no sea necesaria."
-            ),
+                "🚦 Nivel de consumo",
 
-            (
-                "🚿 Reduce el tiempo de ducha",
+                [
 
-                "Disminuye algunos minutos "
-                "y cierra el agua mientras "
-                "aplicas jabón o champú."
-            ),
+                    "BAJO",
 
-            (
-                "🔧 Revisa fugas",
+                    "MODERADO",
 
-                "Inspecciona caños, tanques, "
-                "inodoros y conexiones."
-            ),
+                    "ALTO"
 
-            (
-                "🧺 Optimiza la lavadora",
+                ]
 
-                "Usa cargas completas y "
-                "evita ciclos innecesarios."
-            ),
-
-            (
-                "📊 Controla tu consumo",
-
-                "Compara diferentes periodos "
-                "para detectar aumentos anormales."
             )
-
-        ],
-
-
-        "Comercial": [
-
-            (
-                "📋 Control por actividad",
-
-                "Registra el consumo por turno, "
-                "área o actividad comercial."
-            ),
-
-            (
-                "🔧 Mantén los equipos",
-
-                "Revisa grifos, tuberías "
-                "y equipos que utilizan agua."
-            ),
-
-            (
-                "🧹 Mejora las rutinas de limpieza",
-
-                "Evita utilizar agua corriente "
-                "cuando no sea necesaria."
-            ),
-
-            (
-                "📊 Compara periodos",
-
-                "Relaciona el consumo con "
-                "el nivel de actividad."
-            )
-
-        ],
+        )
 
 
-        "Educativo": [
+    for titulo, texto in (
+        recomendaciones(
 
-            (
-                "🏫 Sensibiliza a los estudiantes",
+            tipo_rec,
 
-                "Promueve hábitos y campañas "
-                "para el uso responsable del agua."
-            ),
+            nivel_rec
 
-            (
-                "🚰 Revisa servicios higiénicos",
-
-                "Controla fugas en inodoros, "
-                "lavatorios y conexiones."
-            ),
-
-            (
-                "📈 Monitorea mensualmente",
-
-                "Compara consumo, asistencia "
-                "y actividades institucionales."
-            ),
-
-            (
-                "🌱 Optimiza el riego",
-
-                "Utiliza horarios con "
-                "menor evaporación."
-            )
-
-        ],
-
-
-        "Institucional": [
-
-            (
-                "📊 Usa indicadores",
-
-                "Compara el consumo por área, "
-                "trabajador o periodo."
-            ),
-
-            (
-                "🔧 Programa mantenimiento",
-
-                "Realiza inspecciones "
-                "preventivas."
-            ),
-
-            (
-                "🚻 Revisa servicios higiénicos",
-
-                "Prioriza zonas de uso frecuente."
-            ),
-
-            (
-                "🎯 Establece metas",
-
-                "Define reducciones progresivas "
-                "y monitorea resultados."
-            )
-
-        ],
-
-
-        "Riego": [
-
-            (
-                "🌅 Elige el horario adecuado",
-
-                "Prefiere primeras horas "
-                "de la mañana o final de la tarde."
-            ),
-
-            (
-                "💧 Evita el exceso de riego",
-
-                "Ajusta el volumen a las "
-                "necesidades del área."
-            ),
-
-            (
-                "🔍 Revisa pérdidas",
-
-                "Inspecciona mangueras, "
-                "uniones y conexiones."
-            ),
-
-            (
-                "📅 Registra cada jornada",
-
-                "Compara volumen, frecuencia "
-                "y área irrigada."
-            )
-
-        ],
-
-
-        "Otro": [
-
-            (
-                "📊 Mide antes de decidir",
-
-                "Registra el consumo "
-                "de forma constante."
-            ),
-
-            (
-                "🔧 Revisa pérdidas",
-
-                "Identifica fugas o usos "
-                "innecesarios."
-            ),
-
-            (
-                "🎯 Define una meta",
-
-                "Utiliza el simulador "
-                "para evaluar reducciones."
-            ),
-
-            (
-                "📈 Evalúa resultados",
-
-                "Compara los periodos "
-                "antes y después de los cambios."
-            )
-
-        ]
-
-    }
-
-
-    for titulo, descripcion in (
-        recomendaciones[
-            tipo_recomendacion
-        ]
+        )
     ):
 
-        html(
-            f"""
-            <div class="tip">
-
-                <h4>
-                    {titulo}
-                </h4>
-
-                <p>
-                    {descripcion}
-                </p>
-
-            </div>
-            """
+        tip_card(
+            titulo,
+            texto
         )
 
 
@@ -3887,31 +3966,22 @@ elif opcion == "💡 Recomendaciones":
 
 elif opcion == "🧮 Modelo matemático":
 
-    st.header(
-        "🧮 Modelo matemático"
+    st.title(
+        "Modelo matemático"
     )
 
 
-    html(
-        """
-        <div class="card">
+    info_card(
 
-            <h3>
-                1. Consumo diario por persona
-            </h3>
+        "Consumo diario por persona",
 
-            <p>
+        "Para el análisis doméstico, "
+        "AquaLog BI distribuye el volumen "
+        "consumido entre las personas "
+        "y los días del periodo.",
 
-                Para el análisis doméstico,
-                AquaLog BI distribuye el
-                volumen consumido entre
-                las personas y los días
-                correspondientes al periodo.
+        "1️⃣"
 
-            </p>
-
-        </div>
-        """
     )
 
 
@@ -3944,27 +4014,18 @@ elif opcion == "🧮 Modelo matemático":
     st.divider()
 
 
-    html(
-        """
-        <div class="card">
+    info_card(
 
-            <h3>
-                2. Índice logarítmico
-            </h3>
+        "Índice logarítmico",
 
-            <p>
+        "AquaLog BI transforma "
+        "el consumo diario por persona "
+        "a una escala logarítmica "
+        "para facilitar la comparación "
+        "de valores.",
 
-                AquaLog BI transforma el
-                consumo diario por persona
-                a una escala logarítmica,
-                permitiendo representar
-                y comparar los valores
-                de forma más compacta.
+        "2️⃣"
 
-            </p>
-
-        </div>
-        """
     )
 
 
@@ -3975,22 +4036,23 @@ elif opcion == "🧮 Modelo matemático":
 
     st.warning(
 
-        "⚠️ Los rangos BAJO, MODERADO "
-        "y ALTO se aplican únicamente "
-        "al análisis doméstico dentro "
-        "del prototipo y deberán estar "
-        "sustentados metodológicamente "
-        "en el proyecto."
+        "Los rangos BAJO, MODERADO "
+        "y ALTO son criterios "
+        "referenciales del prototipo "
+        "para uso doméstico y deberán "
+        "quedar sustentados "
+        "metodológicamente "
+        "en la investigación."
 
     )
 
 
-    # =========================================
+    # --------------------------------------------------------
     # CALCULADORA
-    # =========================================
+    # --------------------------------------------------------
 
     st.subheader(
-        "🧪 Calculadora matemática"
+        "🧪 Calculadora interactiva"
     )
 
 
@@ -4011,7 +4073,7 @@ elif opcion == "🧮 Modelo matemático":
                 value=18.0,
 
                 key=
-                    "volumen_demo"
+                    "vol_demo"
 
             )
         )
@@ -4029,7 +4091,7 @@ elif opcion == "🧮 Modelo matemático":
                 value=4,
 
                 key=
-                    "personas_demo"
+                    "per_demo"
 
             )
         )
@@ -4077,15 +4139,25 @@ elif opcion == "🧮 Modelo matemático":
     )
 
 
-    st.success(
+    c1, c2 = (
+        st.columns(2)
+    )
 
-        f"💧 Cₚ = "
-        f"{cp_demo:.5f} m³/persona/día "
-        f"= "
+
+    c1.metric(
+
+        "Cₚ",
+
         f"{cp_demo * 1000:.2f} "
-        f"L/persona/día | "
+        f"L/persona/día"
 
-        f"🔢 Iₗ = "
+    )
+
+
+    c2.metric(
+
+        "Iₗ",
+
         f"{il_demo:.5f}"
 
     )
@@ -4097,183 +4169,128 @@ elif opcion == "🧮 Modelo matemático":
 
 elif opcion == "ℹ️ Proyecto":
 
-    st.header(
-        "ℹ️ Acerca del proyecto"
+    st.title(
+        "Acerca del proyecto"
     )
 
 
-    html(
-        """
-        <div class="card">
+    info_card(
 
-            <h3>
-                📘 AquaLog BI
-            </h3>
+        "Proyecto de investigación",
 
-            <p>
+        "<b>"
+        "Desarrollo de software basado "
+        "en logaritmos matemáticos para "
+        "la gestión eficiente del agua "
+        "en el distrito de Baños del Inca, "
+        "2026."
+        "</b>"
+        "<br><br>"
+        "AquaLog BI está diseñado como "
+        "un sistema de uso general. "
+        "La ubicación, el sector, "
+        "la zona y el tipo de uso "
+        "se determinan en cada registro.",
 
-                <b>
+        "📘"
 
-                Desarrollo de software basado
-                en logaritmos matemáticos para
-                la gestión eficiente del agua
-                en el distrito de Baños del Inca,
-                2026.
-
-                </b>
-
-            </p>
-
-            <p>
-
-                AquaLog BI está diseñado como
-                un sistema de uso general.
-
-                La ubicación, sector, zona y
-                tipo de uso se determinan
-                en cada registro.
-
-            </p>
-
-        </div>
-        """
     )
 
-
-    # =========================================
-    # DOCENTE
-    # =========================================
 
     st.subheader(
         "👩‍🏫 Docente"
     )
 
 
-    html(
-        """
-        <div class="credit">
+    credit_card(
 
-            👩‍🏫
-            <b>
-                Paola Ponce
-            </b>
+        "Paola Ponce",
 
-        </div>
-        """
+        "👩‍🏫"
+
     )
 
-
-    # =========================================
-    # INTEGRANTES
-    # =========================================
 
     st.subheader(
         "👥 Integrantes"
     )
 
 
-    integrantes = [
+    credit_card(
+        "Chuquiruna Escobal, Jhersonn"
+    )
 
-        "Chuquiruna Escobal, Jhersonn",
 
-        "Paz Muñoz, Vili",
+    credit_card(
+        "Paz Muñoz, Vili"
+    )
 
-        "Vasquez Azañero, Diego",
 
+    credit_card(
+        "Vasquez Azañero, Diego"
+    )
+
+
+    credit_card(
         "Vasquez Bustamante, Nathan Lowell"
+    )
 
-    ]
-
-
-    for integrante in integrantes:
-
-        html(
-            f"""
-            <div class="credit">
-
-                👤
-                <b>
-                    {integrante}
-                </b>
-
-            </div>
-            """
-        )
-
-
-    # =========================================
-    # FUNCIONALIDADES
-    # =========================================
 
     st.subheader(
         "✨ ¿Qué puede hacer AquaLog BI?"
     )
 
 
-    html(
-        """
-        <div class="card">
+    funciones = [
 
-            <p>
-                📝 Registrar diferentes tipos
-                de usuarios y consumos.
-            </p>
+        "📝 Registrar diferentes tipos "
+        "de usuarios y consumos.",
 
-            <p>
-                📍 Trabajar con diferentes
-                sectores y comunidades.
-            </p>
+        "📍 Trabajar con diferentes "
+        "sectores y comunidades.",
 
-            <p>
-                💧 Analizar el consumo de agua.
-            </p>
+        "💧 Analizar el consumo de agua.",
 
-            <p>
-                🧮 Aplicar un modelo
-                logarítmico.
-            </p>
+        "🧮 Aplicar un modelo logarítmico.",
 
-            <p>
-                🔎 Buscar y filtrar información.
-            </p>
+        "🔎 Buscar y filtrar información.",
 
-            <p>
-                👤 Consultar el historial
-                de un usuario.
-            </p>
+        "👤 Consultar el historial "
+        "de un usuario o punto.",
 
-            <p>
-                🎯 Simular escenarios
-                de ahorro.
-            </p>
+        "🎯 Simular escenarios de ahorro.",
 
-            <p>
-                💰 Estimar posibles costos
-                de consumo.
-            </p>
+        "💰 Estimar costos cuando "
+        "se ingresa una tarifa.",
 
-            <p>
-                📈 Analizar la evolución
-                del consumo.
-            </p>
+        "📈 Analizar la evolución temporal.",
 
-            <p>
-                🏆 Identificar los mayores
-                consumos.
-            </p>
+        "🏆 Identificar los mayores consumos.",
 
-            <p>
-                💡 Generar recomendaciones
-                según el tipo de uso.
-            </p>
+        "💡 Mostrar recomendaciones "
+        "según el tipo de uso.",
 
-            <p>
-                📥 Descargar la información
-                registrada.
-            </p>
+        "📥 Descargar los datos registrados."
 
-        </div>
-        """
+    ]
+
+
+    for funcion in funciones:
+
+        st.write(
+            funcion
+        )
+
+
+    st.info(
+
+        "La muestra de 75 usuarios "
+        "pertenece al estudio académico. "
+        "No es un límite del software: "
+        "AquaLog BI puede registrar "
+        "más o menos usuarios "
+        "según la aplicación."
+
     )
 
 
@@ -4284,24 +4301,17 @@ elif opcion == "ℹ️ Proyecto":
 st.divider()
 
 
-html(
-    """
-    <div class="footer">
+st.markdown(
 
-        💧
-        <b>
-            AquaLog BI
-        </b>
+    '<div class="footer">'
+    '💧 <strong>AquaLog BI</strong>'
+    '<br>'
+    'Sistema interactivo para el análisis '
+    'y gestión eficiente del agua'
+    '<br>'
+    'Baños del Inca · Cajamarca · 2026'
+    '</div>',
 
-        <br>
+    unsafe_allow_html=True
 
-        Sistema interactivo para el análisis
-        y gestión eficiente del agua
-
-        <br>
-
-        Baños del Inca · Cajamarca · 2026
-
-    </div>
-    """
 )
