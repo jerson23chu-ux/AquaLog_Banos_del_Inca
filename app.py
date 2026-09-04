@@ -1,12 +1,14 @@
 import streamlit as st
 import math
+import os
+from datetime import date
+
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
 
 
 # ============================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN GENERAL
 # ============================================================
 
 st.set_page_config(
@@ -16,12 +18,28 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
-# ============================================================
-# ARCHIVO PERMANENTE
-# ============================================================
-
 ARCHIVO_DATOS = "hogares.csv"
+
+META_MUESTRA = 75
+
+SECTOR_ESTUDIO = "La Esperanza"
+CAS_ESTUDIO = "Los Berros"
+
+
+COLUMNAS = [
+    "Hogar",
+    "Fecha",
+    "Sector",
+    "CAS",
+    "Tipo de vivienda",
+    "Habitantes",
+    "Consumo mensual (m³)",
+    "Días",
+    "Consumo diario (m³)",
+    "Consumo por persona (L/día)",
+    "Índice logarítmico",
+    "Nivel"
+]
 
 
 # ============================================================
@@ -31,283 +49,440 @@ ARCHIVO_DATOS = "hogares.csv"
 st.markdown("""
 <style>
 
-/* FONDO GENERAL */
+/* ===============================
+FONDO GENERAL
+================================ */
 
 .stApp {
-    background: linear-gradient(
-        135deg,
-        #e8f8ff 0%,
-        #d5f3ff 50%,
-        #f8fdff 100%
-    );
+
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(0,168,232,0.10),
+            transparent 22%
+        ),
+
+        radial-gradient(
+            circle at 90% 20%,
+            rgba(0,91,234,0.10),
+            transparent 24%
+        ),
+
+        linear-gradient(
+            135deg,
+            #eefbff 0%,
+            #dff5ff 50%,
+            #f8fdff 100%
+        );
 
     color: #123047;
 }
 
-
-/* TEXTO GENERAL */
 
 .stApp p,
 .stApp label,
 .stApp span {
+
     color: #123047;
+
 }
 
 
-/* TÍTULOS */
+/* ===============================
+TÍTULOS
+================================ */
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
+
     color: #064b75 !important;
+
 }
 
 
-/* ENCABEZADO */
+/* ===============================
+ENCABEZADO PRINCIPAL
+================================ */
 
-.main-title {
+.hero {
+
     background: linear-gradient(
         135deg,
-        #005bea,
-        #00a8e8
+        #004fc4 0%,
+        #007fe8 50%,
+        #00b7df 100%
     );
 
-    padding: 30px;
+    border-radius: 26px;
 
-    border-radius: 22px;
+    padding: 32px;
 
     color: white;
 
-    text-align: center;
+    box-shadow:
+        0 10px 30px
+        rgba(0,80,150,0.25);
+
+    position: relative;
+
+    overflow: hidden;
+
+    margin-bottom: 24px;
+
+}
+
+
+.hero:before {
+
+    content: "💧";
+
+    position: absolute;
+
+    right: 35px;
+
+    top: 6px;
+
+    font-size: 105px;
+
+    opacity: 0.12;
+
+}
+
+
+.hero h1,
+.hero h2,
+.hero p {
+
+    color: white !important;
+
+    margin: 0;
+
+}
+
+
+.hero h1 {
+
+    font-size: 46px;
+
+    font-weight: 800;
+
+}
+
+
+.hero p {
+
+    font-size: 17px;
+
+    margin-top: 8px;
+
+}
+
+
+/* ===============================
+TARJETAS
+================================ */
+
+.glass {
+
+    background:
+        rgba(255,255,255,0.94);
+
+    border:
+        1px solid
+        rgba(0,110,180,0.10);
+
+    border-radius: 20px;
+
+    padding: 22px;
 
     box-shadow:
-        0 8px 25px rgba(0, 80, 150, 0.25);
+        0 7px 22px
+        rgba(0,80,130,0.08);
 
-    margin-bottom: 25px;
-}
+    margin-bottom: 16px;
 
-.main-title h1 {
-    color: white !important;
-    font-size: 44px;
-    margin: 0;
-    font-weight: 800;
-}
-
-.main-title p {
-    color: white !important;
-    font-size: 18px;
-    margin-top: 8px;
 }
 
 
-/* TARJETAS DEL DASHBOARD */
+/* ===============================
+MÉTRICAS
+================================ */
 
-.dashboard-card {
+.metric-card {
+
     background: white;
-
-    padding: 20px;
 
     border-radius: 18px;
 
-    text-align: center;
-
-    box-shadow:
-        0 5px 18px rgba(0,0,0,0.10);
-
-    min-height: 145px;
-}
-
-.dashboard-card .icon {
-    font-size: 32px;
-}
-
-.dashboard-card .number {
-    font-size: 30px;
-    font-weight: bold;
-    color: #005bea !important;
-}
-
-.dashboard-card .title {
-    font-size: 15px;
-    font-weight: bold;
-    color: #31566b !important;
-}
-
-
-/* TARJETAS DE NIVELES */
-
-.level-low {
-    background: #e8f8ee;
-    border-left: 7px solid #20a05a;
-    padding: 18px;
-    border-radius: 14px;
-    text-align: center;
-}
-
-.level-medium {
-    background: #fff8df;
-    border-left: 7px solid #e3a900;
-    padding: 18px;
-    border-radius: 14px;
-    text-align: center;
-}
-
-.level-high {
-    background: #ffe9e9;
-    border-left: 7px solid #d93636;
-    padding: 18px;
-    border-radius: 14px;
-    text-align: center;
-}
-
-
-/* TARJETAS BLANCAS */
-
-.card {
-    background: white;
-
-    padding: 25px;
-
-    border-radius: 20px;
-
-    box-shadow:
-        0 6px 20px rgba(0,0,0,0.08);
-
-    margin-bottom: 20px;
-}
-
-.card h3 {
-    color: #064b75 !important;
-}
-
-.card p {
-    color: #123047 !important;
-    font-size: 16px;
-}
-
-
-/* TARJETAS AZULES */
-
-.card-blue {
-    background: linear-gradient(
-        135deg,
-        #0066cc,
-        #00a6d6
-    );
-
-    color: white;
-
-    padding: 28px;
-
-    border-radius: 20px;
-
-    text-align: center;
-
-    min-height: 170px;
-
-    box-shadow:
-        0 7px 20px rgba(0,90,160,0.20);
-}
-
-.card-blue h2,
-.card-blue h3,
-.card-blue p {
-    color: white !important;
-}
-
-
-/* RECOMENDACIONES */
-
-.recommendation {
-    background: white;
-
-    border-left: 7px solid #008ed6;
-
     padding: 20px;
 
-    border-radius: 14px;
-
-    margin: 12px 0;
+    text-align: center;
 
     box-shadow:
-        0 5px 15px rgba(0,0,0,0.08);
-}
+        0 6px 20px
+        rgba(0,70,120,0.09);
 
-.recommendation h3 {
-    color: #064b75 !important;
-}
+    min-height: 140px;
 
-.recommendation p {
-    color: #123047 !important;
-    font-size: 16px;
 }
 
 
-/* BARRA LATERAL */
+.metric-card .ico {
+
+    font-size: 30px;
+
+}
+
+
+.metric-card .val {
+
+    font-size: 30px;
+
+    font-weight: 800;
+
+    color: #005bea !important;
+
+}
+
+
+.metric-card .lab {
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    color: #31566b !important;
+
+}
+
+
+/* ===============================
+NIVELES DE CONSUMO
+================================ */
+
+.level-low,
+.level-mid,
+.level-high {
+
+    border-radius: 17px;
+
+    padding: 19px;
+
+    text-align: center;
+
+    background: white;
+
+    box-shadow:
+        0 5px 16px
+        rgba(0,0,0,0.07);
+
+}
+
+
+.level-low {
+
+    border-top:
+        5px solid #1f9d55;
+
+}
+
+
+.level-mid {
+
+    border-top:
+        5px solid #d99b00;
+
+}
+
+
+.level-high {
+
+    border-top:
+        5px solid #d93636;
+
+}
+
+
+/* ===============================
+RECOMENDACIONES
+================================ */
+
+.tip {
+
+    background: white;
+
+    border-left:
+        6px solid #008ed6;
+
+    border-radius: 14px;
+
+    padding: 17px 20px;
+
+    margin: 10px 0;
+
+    box-shadow:
+        0 4px 14px
+        rgba(0,0,0,0.06);
+
+}
+
+
+.tip h4 {
+
+    margin: 0 0 5px 0;
+
+}
+
+
+.tip p {
+
+    margin: 0;
+
+}
+
+
+/* ===============================
+CRÉDITOS
+================================ */
+
+.credit {
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #eef9ff
+        );
+
+    border:
+        1px solid #cfeefe;
+
+    border-radius: 18px;
+
+    padding: 18px;
+
+    margin: 8px 0;
+
+}
+
+
+/* ===============================
+ETIQUETAS
+================================ */
+
+.badge {
+
+    display: inline-block;
+
+    background: #e7f6ff;
+
+    color: #045b8f !important;
+
+    padding: 7px 12px;
+
+    border-radius: 999px;
+
+    font-weight: 700;
+
+    margin-right: 6px;
+
+    margin-bottom: 6px;
+
+}
+
+
+/* ===============================
+SIDEBAR
+================================ */
 
 section[data-testid="stSidebar"] {
-    background: linear-gradient(
-        180deg,
-        #005bea,
-        #008ed6,
-        #00a6d6
-    );
+
+    background:
+        linear-gradient(
+            180deg,
+            #004fc4,
+            #007ddd,
+            #00a8d8
+        );
+
 }
+
 
 section[data-testid="stSidebar"] * {
+
     color: white !important;
+
 }
 
 
-/* BOTONES */
+/* ===============================
+BOTONES
+================================ */
 
 .stButton button {
-    background: linear-gradient(
-        90deg,
-        #0066cc,
-        #00a6d6
-    );
+
+    background:
+        linear-gradient(
+            90deg,
+            #005bea,
+            #00a6d6
+        );
 
     color: white !important;
 
     border: none;
 
-    border-radius: 14px;
+    border-radius: 13px;
 
-    padding: 12px 20px;
+    font-weight: 700;
 
-    font-size: 16px;
-
-    font-weight: bold;
 }
 
 
-/* INPUTS */
+.stButton button:hover {
 
-input,
-textarea {
-    color: #123047 !important;
-    background-color: white !important;
+    transform:
+        translateY(-1px);
+
 }
 
 
-/* MÉTRICAS */
+/* ===============================
+MÉTRICAS STREAMLIT
+================================ */
 
 [data-testid="stMetricValue"] {
+
     color: #064b75 !important;
-    font-weight: bold;
+
+    font-weight: 800;
+
 }
+
 
 [data-testid="stMetricLabel"] {
+
     color: #123047 !important;
+
 }
 
 
-/* PIE */
+/* ===============================
+PIE DE PÁGINA
+================================ */
 
 .footer {
+
     text-align: center;
+
     color: #31566b;
-    padding: 25px;
+
+    padding: 22px;
+
     font-size: 14px;
+
 }
 
 </style>
@@ -315,85 +490,159 @@ textarea {
 
 
 # ============================================================
-# CARGAR DATOS
+# FUNCIONES DE DATOS
 # ============================================================
 
-if "hogares" not in st.session_state:
+def dataframe_vacio():
 
-    if os.path.exists(ARCHIVO_DATOS):
+    return pd.DataFrame(
+        columns=COLUMNAS
+    )
+
+
+def normalizar_df(df):
+
+    if df is None or df.empty:
+
+        return dataframe_vacio()
+
+    df = df.copy()
+
+    for columna in COLUMNAS:
+
+        if columna not in df.columns:
+
+            df[columna] = ""
+
+    df["Sector"] = (
+        df["Sector"]
+        .replace(
+            "",
+            SECTOR_ESTUDIO
+        )
+    )
+
+    df["CAS"] = (
+        df["CAS"]
+        .replace(
+            "",
+            CAS_ESTUDIO
+        )
+    )
+
+    df["Días"] = (
+        pd.to_numeric(
+            df["Días"],
+            errors="coerce"
+        )
+        .fillna(30)
+        .astype(int)
+    )
+
+    df["Fecha"] = (
+        df["Fecha"]
+        .replace(
+            "",
+            pd.Timestamp.today().strftime(
+                "%Y-%m-%d"
+            )
+        )
+    )
+
+    df["Tipo de vivienda"] = (
+        df["Tipo de vivienda"]
+        .replace(
+            "",
+            "No especificado"
+        )
+    )
+
+    return df[COLUMNAS]
+
+
+def cargar_datos():
+
+    if os.path.exists(
+        ARCHIVO_DATOS
+    ):
 
         try:
 
-            df_guardado = pd.read_csv(
+            df = pd.read_csv(
                 ARCHIVO_DATOS
             )
 
-            st.session_state.hogares = (
-                df_guardado.to_dict(
-                    orient="records"
-                )
+            return normalizar_df(
+                df
             )
 
         except Exception:
 
-            st.session_state.hogares = []
+            return dataframe_vacio()
 
-    else:
-
-        st.session_state.hogares = []
+    return dataframe_vacio()
 
 
-# ============================================================
-# ENCABEZADO
-# ============================================================
+def guardar_datos(df):
 
-st.markdown("""
-<div class="main-title">
+    df = normalizar_df(
+        df
+    )
 
-<h1>💧 AquaLog BI</h1>
+    df.to_csv(
+        ARCHIVO_DATOS,
+        index=False,
+        encoding="utf-8-sig"
+    )
 
-<p>
-Sistema inteligente para la gestión eficiente del agua
-</p>
 
-<p>
-📍 Baños del Inca - Cajamarca | 📅 2026
-</p>
+if "df" not in st.session_state:
 
-</div>
-""", unsafe_allow_html=True)
+    st.session_state.df = (
+        cargar_datos()
+    )
 
 
 # ============================================================
-# FUNCIÓN DE ANÁLISIS
+# MODELO MATEMÁTICO
 # ============================================================
 
 def analizar_consumo(
     habitantes,
-    consumo,
+    consumo_m3,
     dias
 ):
 
-    consumo_diario = consumo / dias
-
-    consumo_persona = (
-        consumo /
-        (habitantes * dias)
+    consumo_diario_m3 = (
+        consumo_m3 /
+        dias
     )
 
-    litros_persona = (
-        consumo_persona * 1000
+    consumo_persona_m3_dia = (
+        consumo_m3 /
+        (
+            habitantes *
+            dias
+        )
     )
 
-    indice_log = math.log10(
-        1 + consumo_persona
+    litros_persona_dia = (
+        consumo_persona_m3_dia *
+        1000
     )
 
-    if litros_persona < 100:
+    indice_log = (
+        math.log10(
+            1 +
+            consumo_persona_m3_dia
+        )
+    )
+
+    if litros_persona_dia < 100:
 
         nivel = "BAJO"
 
-    elif litros_persona <= 170:
+    elif litros_persona_dia <= 170:
 
         nivel = "MODERADO"
 
@@ -402,9 +651,9 @@ def analizar_consumo(
         nivel = "ALTO"
 
     return (
-        consumo_diario,
-        consumo_persona,
-        litros_persona,
+        consumo_diario_m3,
+        consumo_persona_m3_dia,
+        litros_persona_dia,
         indice_log,
         nivel
     )
@@ -414,90 +663,222 @@ def analizar_consumo(
 # RECOMENDACIONES
 # ============================================================
 
-def obtener_recomendaciones(nivel):
+def recomendaciones_por_nivel(
+    nivel
+):
+
+    recomendaciones = [
+
+        (
+            "🚰 Cerrar los caños",
+
+            "Cierra el caño mientras te cepillas "
+            "los dientes, te enjabonas las manos "
+            "o cuando no necesites agua corriendo."
+        ),
+
+        (
+            "🚿 Reducir el tiempo de ducha",
+
+            "Disminuye el tiempo de ducha y "
+            "cierra el agua mientras aplicas "
+            "jabón o champú."
+        ),
+
+        (
+            "🔧 Revisar fugas",
+
+            "Inspecciona caños, conexiones, "
+            "tuberías e inodoros. Una fuga "
+            "pequeña puede generar desperdicio "
+            "constante."
+        ),
+
+        (
+            "🪣 Usar recipientes",
+
+            "Para algunas actividades de limpieza "
+            "utiliza un balde o recipiente en lugar "
+            "de mantener abierto el caño."
+        ),
+
+        (
+            "🧺 Usar cargas completas",
+
+            "Procura utilizar la lavadora con "
+            "cargas completas y evita ciclos "
+            "innecesarios."
+        ),
+
+        (
+            "🌱 Riego responsable",
+
+            "Riega durante las primeras horas "
+            "de la mañana o al finalizar la tarde "
+            "para reducir la evaporación."
+        ),
+
+        (
+            "🚽 Revisar el inodoro",
+
+            "Verifica que el tanque y las válvulas "
+            "del inodoro no presenten pérdidas."
+        ),
+
+        (
+            "♻️ Reutilizar agua",
+
+            "Cuando sea apropiado y seguro, "
+            "reutiliza agua para actividades "
+            "como limpieza o riego."
+        ),
+
+        (
+            "📊 Monitorear el consumo",
+
+            "Compara periódicamente tu consumo "
+            "para detectar incrementos y evaluar "
+            "si las medidas de ahorro funcionan."
+        )
+
+    ]
 
     if nivel == "BAJO":
 
         return [
-            "🚰 Cierra los caños cuando no estén en uso.",
-            "🦷 Cierra el caño mientras te cepillas los dientes.",
-            "🚿 Mantén un tiempo adecuado durante la ducha.",
-            "🌱 Riega las plantas en horarios de menor evaporación.",
-            "🔧 Revisa periódicamente las instalaciones.",
-            "💧 Continúa monitoreando el consumo."
+            recomendaciones[0],
+            recomendaciones[1],
+            recomendaciones[2],
+            recomendaciones[5],
+            recomendaciones[8]
         ]
 
     elif nivel == "MODERADO":
 
-        return [
-            "🚰 Cierra los caños mientras no estés utilizando el agua.",
-            "🦷 No dejes correr el agua mientras te cepillas los dientes.",
-            "🚿 Reduce el tiempo de las duchas.",
-            "🔧 Revisa caños, grifos e inodoros para detectar fugas.",
-            "🧺 Utiliza la lavadora con cargas completas.",
-            "🪣 Utiliza recipientes para determinadas actividades.",
-            "🌱 Evita utilizar más agua de la necesaria para regar.",
-            "📊 Registra periódicamente el consumo."
-        ]
+        return recomendaciones
 
     else:
 
         return [
-            "🔧 Revisa inmediatamente caños, grifos, inodoros y tuberías.",
-            "🚰 Cierra los caños cuando no estén siendo utilizados.",
-            "🚿 Reduce el tiempo de las duchas.",
-            "🦷 Cierra el caño mientras te cepillas los dientes.",
-            "🪣 Utiliza recipientes en lugar de dejar correr el agua.",
-            "🧺 Evita utilizar la lavadora con cargas pequeñas.",
-            "🌱 Controla el agua utilizada para el riego.",
-            "♻️ Reutiliza agua cuando sea apropiado.",
-            "🚽 Comprueba que el inodoro no tenga fugas.",
-            "📊 Registra nuevamente el consumo."
+
+            (
+                "🚨 Acción prioritaria",
+
+                "El consumo registrado es elevado. "
+                "Se recomienda revisar primero "
+                "posibles fugas en caños, tanques, "
+                "inodoros y tuberías."
+            ),
+
+            *recomendaciones
+
         ]
 
 
 # ============================================================
-# MENÚ
+# ENCABEZADO
+# ============================================================
+
+st.markdown(
+    f"""
+    <div class="hero">
+
+        <h1>
+        💧 AquaLog BI
+        </h1>
+
+        <p>
+        Inteligencia matemática para la gestión
+        eficiente del agua
+        </p>
+
+        <p>
+        📍 Sector {SECTOR_ESTUDIO}
+        · CAS {CAS_ESTUDIO}
+        · Baños del Inca
+        · 2026
+        </p>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# MENÚ LATERAL
 # ============================================================
 
 st.sidebar.markdown(
     """
-    <h1 style="text-align:center;color:white!important;">
-    💧
+    <h1 style="
+        text-align:center;
+        color:white!important;">
+        💧
     </h1>
     """,
     unsafe_allow_html=True
 )
 
+
 st.sidebar.markdown(
     """
-    <h2 style="text-align:center;color:white!important;">
-    AquaLog BI
+    <h2 style="
+        text-align:center;
+        color:white!important;">
+        AquaLog BI
     </h2>
     """,
     unsafe_allow_html=True
 )
 
+
 st.sidebar.markdown(
     """
-    <p style="text-align:center;color:white!important;">
-    Gestión inteligente del agua
+    <p style="
+        text-align:center;
+        color:white!important;">
+        Gestión inteligente del agua
     </p>
     """,
     unsafe_allow_html=True
 )
 
+
 st.sidebar.divider()
 
+
 opcion = st.sidebar.radio(
+
     "MENÚ PRINCIPAL",
+
     [
-        "🏠 Inicio",
-        "📝 Registrar hogar",
-        "📊 Resultados",
-        "📈 Gráficos",
-        "💡 Recomendaciones"
+
+        "🏠 Dashboard",
+
+        "📝 Registrar usuario",
+
+        "📊 Base de datos",
+
+        "📈 Análisis y gráficos",
+
+        "💡 Recomendaciones",
+
+        "🧮 Modelo matemático",
+
+        "ℹ️ Acerca del proyecto"
+
     ]
+
+)
+
+
+st.sidebar.divider()
+
+
+st.sidebar.caption(
+    f"Muestra objetivo: "
+    f"{META_MUESTRA} usuarios"
 )
 
 
@@ -505,587 +886,125 @@ opcion = st.sidebar.radio(
 # DASHBOARD
 # ============================================================
 
-if opcion == "🏠 Inicio":
+if opcion == "🏠 Dashboard":
 
     st.header(
-        "🌊 Dashboard de AquaLog BI"
+        "🌊 Dashboard general"
     )
 
-    df = pd.DataFrame(
-        st.session_state.hogares
+    df = normalizar_df(
+        st.session_state.df
     )
-
-    # --------------------------------------------------------
-    # SI NO HAY DATOS
-    # --------------------------------------------------------
 
     if df.empty:
 
-        st.markdown("""
-        <div class="card">
-
-        <h3>💧 Bienvenido a AquaLog BI</h3>
-
-        <p>
-        Aún no existen hogares registrados.
-        Comienza registrando el primer hogar para
-        visualizar los indicadores del sistema.
-        </p>
-
-        </div>
-        """, unsafe_allow_html=True)
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-
-            st.markdown("""
-            <div class="card-blue">
-
-            <h2>📝</h2>
-
-            <h3>Registrar</h3>
-
-            <p>
-            Ingresa los datos de los hogares.
-            </p>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-
-            st.markdown("""
-            <div class="card-blue">
-
-            <h2>🧮</h2>
-
-            <h3>Analizar</h3>
-
-            <p>
-            Calcula el consumo y el índice logarítmico.
-            </p>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col3:
-
-            st.markdown("""
-            <div class="card-blue">
-
-            <h2>📊</h2>
-
-            <h3>Visualizar</h3>
-
-            <p>
-            Consulta gráficos y resultados.
-            </p>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-    # --------------------------------------------------------
-    # SI YA HAY DATOS
-    # --------------------------------------------------------
+        st.info(
+            "💧 Aún no existen usuarios registrados. "
+            "Ingresa el primer registro desde "
+            "📝 Registrar usuario."
+        )
 
     else:
 
-        # INDICADORES
+        total = len(df)
 
-        total_hogares = len(df)
+        avance = min(
+            total /
+            META_MUESTRA,
+            1.0
+        )
 
-        consumo_promedio = df[
-            "Consumo mensual (m³)"
-        ].mean()
-
-        promedio_persona = df[
-            "Consumo por persona (L/día)"
-        ].mean()
-
-        indice_promedio = df[
-            "Índice logarítmico"
-        ].mean()
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-
-            st.markdown(
-                f"""
-                <div class="dashboard-card">
-
-                <div class="icon">🏠</div>
-
-                <div class="number">
-                {total_hogares}
-                </div>
-
-                <div class="title">
-                HOGARES REGISTRADOS
-                </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
+        consumo_promedio = (
+            pd.to_numeric(
+                df[
+                    "Consumo mensual (m³)"
+                ],
+                errors="coerce"
             )
+            .mean()
+        )
 
-        with col2:
-
-            st.markdown(
-                f"""
-                <div class="dashboard-card">
-
-                <div class="icon">💧</div>
-
-                <div class="number">
-                {consumo_promedio:.2f}
-                </div>
-
-                <div class="title">
-                CONSUMO PROMEDIO (m³)
-                </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
+        litros_promedio = (
+            pd.to_numeric(
+                df[
+                    "Consumo por persona (L/día)"
+                ],
+                errors="coerce"
             )
+            .mean()
+        )
 
-        with col3:
-
-            st.markdown(
-                f"""
-                <div class="dashboard-card">
-
-                <div class="icon">👤</div>
-
-                <div class="number">
-                {promedio_persona:.1f}
-                </div>
-
-                <div class="title">
-                LITROS/PERSONA/DÍA
-                </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
+        indice_promedio = (
+            pd.to_numeric(
+                df[
+                    "Índice logarítmico"
+                ],
+                errors="coerce"
             )
-
-        with col4:
-
-            st.markdown(
-                f"""
-                <div class="dashboard-card">
-
-                <div class="icon">🔢</div>
-
-                <div class="number">
-                {indice_promedio:.4f}
-                </div>
-
-                <div class="title">
-                ÍNDICE LOGARÍTMICO
-                </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        st.write("")
-
-        # ----------------------------------------------------
-        # NIVELES
-        # ----------------------------------------------------
-
-        bajos = len(
-            df[df["Nivel"] == "BAJO"]
-        )
-
-        moderados = len(
-            df[df["Nivel"] == "MODERADO"]
-        )
-
-        altos = len(
-            df[df["Nivel"] == "ALTO"]
-        )
-
-        st.subheader(
-            "📊 Clasificación de los hogares"
-        )
-
-        c1, c2, c3 = st.columns(3)
-
-        with c1:
-
-            st.markdown(
-                f"""
-                <div class="level-low">
-
-                <h2>🟢</h2>
-
-                <h3>Consumo bajo</h3>
-
-                <h1>{bajos}</h1>
-
-                <p>hogares</p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c2:
-
-            st.markdown(
-                f"""
-                <div class="level-medium">
-
-                <h2>🟡</h2>
-
-                <h3>Consumo moderado</h3>
-
-                <h1>{moderados}</h1>
-
-                <p>hogares</p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c3:
-
-            st.markdown(
-                f"""
-                <div class="level-high">
-
-                <h2>🔴</h2>
-
-                <h3>Consumo alto</h3>
-
-                <h1>{altos}</h1>
-
-                <p>hogares</p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        st.write("")
-
-        # ----------------------------------------------------
-        # MAYOR Y MENOR CONSUMO
-        # ----------------------------------------------------
-
-        hogar_mayor = df.loc[
-            df["Consumo mensual (m³)"].idxmax()
-        ]
-
-        hogar_menor = df.loc[
-            df["Consumo mensual (m³)"].idxmin()
-        ]
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-
-            st.markdown(
-                f"""
-                <div class="card">
-
-                <h3>🔴 Mayor consumo</h3>
-
-                <p>
-                <b>Hogar:</b> {hogar_mayor["Hogar"]}
-                </p>
-
-                <p>
-                <b>Consumo:</b>
-                {hogar_mayor["Consumo mensual (m³)"]:.2f} m³
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c2:
-
-            st.markdown(
-                f"""
-                <div class="card">
-
-                <h3>🟢 Menor consumo</h3>
-
-                <p>
-                <b>Hogar:</b> {hogar_menor["Hogar"]}
-                </p>
-
-                <p>
-                <b>Consumo:</b>
-                {hogar_menor["Consumo mensual (m³)"]:.2f} m³
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # ----------------------------------------------------
-        # GRÁFICO DEL DASHBOARD
-        # ----------------------------------------------------
-
-        st.subheader(
-            "📈 Distribución de hogares"
-        )
-
-        niveles = df[
-            "Nivel"
-        ].value_counts()
-
-        fig, ax = plt.subplots(
-            figsize=(8, 5)
-        )
-
-        ax.pie(
-            niveles.values,
-            labels=niveles.index,
-            autopct="%1.1f%%"
-        )
-
-        ax.set_title(
-            "Distribución según nivel de consumo"
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-        st.info(
-            "💡 Los indicadores se actualizan automáticamente "
-            "cuando registras nuevos hogares."
+            .mean()
         )
 
 
-# ============================================================
-# REGISTRAR HOGAR
-# ============================================================
+        # MÉTRICAS
 
-elif opcion == "📝 Registrar hogar":
+        columnas = st.columns(4)
 
-    st.header(
-        "📝 Registro de consumo de agua"
-    )
 
-    st.write(
-        "Ingresa los datos correspondientes al hogar."
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        codigo = st.text_input(
-            "🏠 Código del hogar",
-            placeholder="Ejemplo: H001"
-        )
-
-        habitantes = st.number_input(
-            "👥 Número de habitantes",
-            min_value=1,
-            max_value=20,
-            value=4
-        )
-
-    with col2:
-
-        consumo = st.number_input(
-            "💧 Consumo mensual (m³)",
-            min_value=0.0,
-            value=18.0,
-            step=0.1
-        )
-
-        dias = st.number_input(
-            "📅 Número de días",
-            min_value=1,
-            max_value=31,
-            value=30
-        )
-
-    st.write("")
-
-    if st.button(
-        "💧 ANALIZAR Y REGISTRAR",
-        use_container_width=True
-    ):
-
-        if codigo.strip() == "":
-
-            st.error(
-                "⚠️ Ingresa el código del hogar."
-            )
-
-        elif consumo <= 0:
-
-            st.error(
-                "⚠️ El consumo debe ser mayor que cero."
-            )
-
-        else:
+        tarjetas = [
 
             (
-                consumo_diario,
-                consumo_persona,
-                litros_persona,
-                indice_log,
-                nivel
-            ) = analizar_consumo(
-                habitantes,
-                consumo,
-                dias
+                "👥",
+                f"{total}/{META_MUESTRA}",
+                "USUARIOS REGISTRADOS"
+            ),
+
+            (
+                "💧",
+                f"{consumo_promedio:.2f}",
+                "CONSUMO PROMEDIO m³"
+            ),
+
+            (
+                "👤",
+                f"{litros_promedio:.1f}",
+                "L/PERSONA/DÍA"
+            ),
+
+            (
+                "🔢",
+                f"{indice_promedio:.4f}",
+                "ÍNDICE LOGARÍTMICO"
             )
 
-            hogar = {
+        ]
 
-                "Hogar": codigo.upper(),
 
-                "Habitantes": habitantes,
+        for columna, tarjeta in zip(
+            columnas,
+            tarjetas
+        ):
 
-                "Consumo mensual (m³)": consumo,
-
-                "Consumo diario (m³)": round(
-                    consumo_diario,
-                    3
-                ),
-
-                "Consumo por persona (L/día)": round(
-                    litros_persona,
-                    2
-                ),
-
-                "Índice logarítmico": round(
-                    indice_log,
-                    4
-                ),
-
-                "Nivel": nivel
-            }
-
-            st.session_state.hogares.append(
-                hogar
+            icono, valor, titulo = (
+                tarjeta
             )
 
-            df_guardado = pd.DataFrame(
-                st.session_state.hogares
-            )
-
-            df_guardado.to_csv(
-                ARCHIVO_DATOS,
-                index=False,
-                encoding="utf-8-sig"
-            )
-
-            st.success(
-                "✅ ¡Hogar registrado y guardado correctamente!"
-            )
-
-            st.divider()
-
-            st.subheader(
-                "📊 Resultado del análisis"
-            )
-
-            c1, c2, c3, c4 = st.columns(4)
-
-            with c1:
-
-                st.metric(
-                    "💧 Consumo diario",
-                    f"{consumo_diario:.2f} m³"
-                )
-
-            with c2:
-
-                st.metric(
-                    "👤 Por persona",
-                    f"{litros_persona:.1f} L/día"
-                )
-
-            with c3:
-
-                st.metric(
-                    "🔢 Índice logarítmico",
-                    f"{indice_log:.4f}"
-                )
-
-            with c4:
-
-                st.metric(
-                    "📊 Nivel",
-                    nivel
-                )
-
-            st.divider()
-
-            if nivel == "BAJO":
-
-                st.success(
-                    "🟢 CONSUMO BAJO"
-                )
-
-            elif nivel == "MODERADO":
-
-                st.warning(
-                    "🟡 CONSUMO MODERADO"
-                )
-
-            else:
-
-                st.error(
-                    "🔴 CONSUMO ALTO"
-                )
-
-            st.divider()
-
-            st.subheader(
-                "🧮 Modelo matemático"
-            )
-
-            st.latex(
-                r"I_L = \log_{10}(1+C_p)"
-            )
-
-            st.write(
-                f"Consumo por persona: "
-                f"{consumo_persona:.4f} m³/persona/día"
-            )
-
-            st.write(
-                f"Índice logarítmico obtenido: "
-                f"{indice_log:.4f}"
-            )
-
-            st.divider()
-
-            st.subheader(
-                "💡 Recomendaciones para este hogar"
-            )
-
-            recomendaciones = obtener_recomendaciones(
-                nivel
-            )
-
-            for recomendacion in recomendaciones:
+            with columna:
 
                 st.markdown(
                     f"""
-                    <div class="recommendation">
+                    <div class="metric-card">
 
-                    <p>{recomendacion}</p>
+                        <div class="ico">
+                        {icono}
+                        </div>
+
+                        <div class="val">
+                        {valor}
+                        </div>
+
+                        <div class="lab">
+                        {titulo}
+                        </div>
 
                     </div>
                     """,
@@ -1093,292 +1012,1820 @@ elif opcion == "📝 Registrar hogar":
                 )
 
 
-# ============================================================
-# RESULTADOS
-# ============================================================
-
-elif opcion == "📊 Resultados":
-
-    st.header(
-        "📊 Resultados de los hogares"
-    )
-
-    if len(st.session_state.hogares) == 0:
-
-        st.info(
-            "💧 Todavía no hay hogares registrados."
-        )
-
-    else:
-
-        df = pd.DataFrame(
-            st.session_state.hogares
-        )
-
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True
-        )
-
         st.write("")
 
-        csv = df.to_csv(
-            index=False,
-            encoding="utf-8-sig"
-        )
 
-        st.download_button(
-            label="📥 Descargar datos en CSV",
-            data=csv,
-            file_name="AquaLog_Hogares.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-
-        st.divider()
+        # AVANCE DE LA MUESTRA
 
         st.subheader(
-            "📌 Resumen general"
+            "🎯 Avance de la muestra"
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        st.progress(
+            avance
+        )
+
+        st.caption(
+            f"{total} de {META_MUESTRA} "
+            f"usuarios registrados "
+            f"({avance * 100:.1f}%)."
+        )
+
+
+        # NIVELES
+
+        bajos = int(
+            (
+                df["Nivel"]
+                == "BAJO"
+            ).sum()
+        )
+
+        moderados = int(
+            (
+                df["Nivel"]
+                == "MODERADO"
+            ).sum()
+        )
+
+        altos = int(
+            (
+                df["Nivel"]
+                == "ALTO"
+            ).sum()
+        )
+
+
+        st.subheader(
+            "📊 Clasificación del consumo"
+        )
+
+
+        c1, c2, c3 = st.columns(3)
+
 
         with c1:
 
-            st.metric(
-                "🏠 Hogares",
-                len(df)
+            st.markdown(
+                f"""
+                <div class="level-low">
+
+                    <h2>🟢</h2>
+
+                    <h3>
+                    Bajo
+                    </h3>
+
+                    <h1>
+                    {bajos}
+                    </h1>
+
+                    <p>
+                    usuarios
+                    </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
             )
+
 
         with c2:
 
-            promedio = df[
-                "Consumo mensual (m³)"
-            ].mean()
+            st.markdown(
+                f"""
+                <div class="level-mid">
 
-            st.metric(
-                "💧 Consumo promedio",
-                f"{promedio:.2f} m³"
+                    <h2>🟡</h2>
+
+                    <h3>
+                    Moderado
+                    </h3>
+
+                    <h1>
+                    {moderados}
+                    </h1>
+
+                    <p>
+                    usuarios
+                    </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
             )
+
 
         with c3:
 
-            promedio_persona = df[
-                "Consumo por persona (L/día)"
-            ].mean()
+            st.markdown(
+                f"""
+                <div class="level-high">
 
-            st.metric(
-                "👤 Promedio/persona",
-                f"{promedio_persona:.1f} L/día"
+                    <h2>🔴</h2>
+
+                    <h3>
+                    Alto
+                    </h3>
+
+                    <h1>
+                    {altos}
+                    </h1>
+
+                    <p>
+                    usuarios
+                    </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-        with c4:
 
-            promedio_log = df[
-                "Índice logarítmico"
-            ].mean()
+        st.write("")
 
-            st.metric(
-                "🔢 Índice promedio",
-                f"{promedio_log:.4f}"
+
+        # MAYOR Y MENOR CONSUMO
+
+        consumo_numerico = (
+            pd.to_numeric(
+                df[
+                    "Consumo mensual (m³)"
+                ],
+                errors="coerce"
+            )
+        )
+
+
+        indice_mayor = (
+            consumo_numerico
+            .idxmax()
+        )
+
+
+        indice_menor = (
+            consumo_numerico
+            .idxmin()
+        )
+
+
+        mayor = df.loc[
+            indice_mayor
+        ]
+
+
+        menor = df.loc[
+            indice_menor
+        ]
+
+
+        c1, c2 = st.columns(2)
+
+
+        with c1:
+
+            st.markdown(
+                f"""
+                <div class="glass">
+
+                    <h3>
+                    🔴 Mayor consumo mensual
+                    </h3>
+
+                    <p>
+                    <b>
+                    {mayor["Hogar"]}
+                    </b>
+                    ·
+                    {float(
+                        mayor[
+                            "Consumo mensual (m³)"
+                        ]
+                    ):.2f}
+                    m³
+                    </p>
+
+                    <p>
+                    {mayor["Habitantes"]}
+                    habitantes
+                    ·
+                    {mayor["Nivel"]}
+                    </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+        with c2:
+
+            st.markdown(
+                f"""
+                <div class="glass">
+
+                    <h3>
+                    🟢 Menor consumo mensual
+                    </h3>
+
+                    <p>
+                    <b>
+                    {menor["Hogar"]}
+                    </b>
+                    ·
+                    {float(
+                        menor[
+                            "Consumo mensual (m³)"
+                        ]
+                    ):.2f}
+                    m³
+                    </p>
+
+                    <p>
+                    {menor["Habitantes"]}
+                    habitantes
+                    ·
+                    {menor["Nivel"]}
+                    </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
 
 # ============================================================
-# GRÁFICOS
+# REGISTRAR USUARIO
 # ============================================================
 
-elif opcion == "📈 Gráficos":
+elif opcion == "📝 Registrar usuario":
 
     st.header(
-        "📈 Visualización del consumo"
+        "📝 Registro de consumo"
     )
 
-    if len(st.session_state.hogares) == 0:
+
+    st.write(
+        "Registra un usuario del sector de estudio. "
+        "AquaLog BI calculará automáticamente "
+        "los indicadores matemáticos."
+    )
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        codigo = st.text_input(
+
+            "🆔 Código del usuario",
+
+            placeholder="Ejemplo: U001"
+
+        )
+
+
+        fecha_registro = st.date_input(
+
+            "📅 Fecha del registro",
+
+            value=date.today()
+
+        )
+
+
+    with c2:
+
+        habitantes = st.number_input(
+
+            "👥 Número de habitantes",
+
+            min_value=1,
+
+            max_value=20,
+
+            value=4
+
+        )
+
+
+        vivienda = st.selectbox(
+
+            "🏠 Tipo de vivienda",
+
+            [
+
+                "Casa independiente",
+
+                "Vivienda multifamiliar",
+
+                "Departamento",
+
+                "Otro"
+
+            ]
+
+        )
+
+
+    with c3:
+
+        consumo = st.number_input(
+
+            "💧 Consumo mensual (m³)",
+
+            min_value=0.1,
+
+            value=18.0,
+
+            step=0.1
+
+        )
+
+
+        dias = st.number_input(
+
+            "📆 Días del periodo",
+
+            min_value=1,
+
+            max_value=31,
+
+            value=30
+
+        )
+
+
+    st.markdown(
+
+        f"""
+        <span class="badge">
+        📍 {SECTOR_ESTUDIO}
+        </span>
+
+        <span class="badge">
+        CAS {CAS_ESTUDIO}
+        </span>
+        """,
+
+        unsafe_allow_html=True
+
+    )
+
+
+    st.write("")
+
+
+    if st.button(
+
+        "💧 ANALIZAR Y REGISTRAR",
+
+        use_container_width=True
+
+    ):
+
+
+        codigo_limpio = (
+            codigo
+            .strip()
+            .upper()
+        )
+
+
+        if (
+            not st.session_state.df.empty
+        ):
+
+            codigos = (
+
+                st.session_state.df[
+                    "Hogar"
+                ]
+
+                .astype(str)
+
+                .str.upper()
+
+                .tolist()
+
+            )
+
+        else:
+
+            codigos = []
+
+
+        if not codigo_limpio:
+
+            st.error(
+                "⚠️ Ingresa un código de usuario."
+            )
+
+
+        elif codigo_limpio in codigos:
+
+            st.error(
+                "⚠️ Ese código ya existe. "
+                "Utiliza un código diferente."
+            )
+
+
+        else:
+
+            (
+                consumo_diario,
+
+                consumo_persona_m3,
+
+                litros_persona,
+
+                indice_log,
+
+                nivel
+
+            ) = analizar_consumo(
+
+                habitantes,
+
+                consumo,
+
+                dias
+
+            )
+
+
+            nuevo_registro = pd.DataFrame(
+
+                [
+
+                    {
+
+                        "Hogar":
+                        codigo_limpio,
+
+                        "Fecha":
+                        fecha_registro.strftime(
+                            "%Y-%m-%d"
+                        ),
+
+                        "Sector":
+                        SECTOR_ESTUDIO,
+
+                        "CAS":
+                        CAS_ESTUDIO,
+
+                        "Tipo de vivienda":
+                        vivienda,
+
+                        "Habitantes":
+                        habitantes,
+
+                        "Consumo mensual (m³)":
+                        consumo,
+
+                        "Días":
+                        dias,
+
+                        "Consumo diario (m³)":
+                        round(
+                            consumo_diario,
+                            4
+                        ),
+
+                        "Consumo por persona (L/día)":
+                        round(
+                            litros_persona,
+                            2
+                        ),
+
+                        "Índice logarítmico":
+                        round(
+                            indice_log,
+                            4
+                        ),
+
+                        "Nivel":
+                        nivel
+
+                    }
+
+                ]
+
+            )
+
+
+            st.session_state.df = (
+                pd.concat(
+
+                    [
+
+                        normalizar_df(
+                            st.session_state.df
+                        ),
+
+                        nuevo_registro
+
+                    ],
+
+                    ignore_index=True
+
+                )
+            )
+
+
+            guardar_datos(
+                st.session_state.df
+            )
+
+
+            st.success(
+                "✅ Usuario registrado correctamente."
+            )
+
+
+            st.divider()
+
+
+            # RESULTADOS
+
+            st.subheader(
+                "📊 Resultado del análisis"
+            )
+
+
+            c1, c2, c3, c4 = (
+                st.columns(4)
+            )
+
+
+            c1.metric(
+
+                "💧 Consumo diario",
+
+                f"{consumo_diario:.3f} m³"
+
+            )
+
+
+            c2.metric(
+
+                "👤 Por persona",
+
+                f"{litros_persona:.1f} L/día"
+
+            )
+
+
+            c3.metric(
+
+                "🔢 Índice log.",
+
+                f"{indice_log:.4f}"
+
+            )
+
+
+            c4.metric(
+
+                "📊 Nivel",
+
+                nivel
+
+            )
+
+
+            if nivel == "BAJO":
+
+                st.success(
+                    "🟢 CONSUMO BAJO"
+                )
+
+
+            elif nivel == "MODERADO":
+
+                st.warning(
+                    "🟡 CONSUMO MODERADO"
+                )
+
+
+            else:
+
+                st.error(
+                    "🔴 CONSUMO ALTO"
+                )
+
+
+            # MODELO MATEMÁTICO
+
+            st.divider()
+
+
+            st.subheader(
+                "🧮 Desarrollo matemático"
+            )
+
+
+            st.write(
+                "Primero se calcula el "
+                "consumo diario por persona:"
+            )
+
+
+            st.latex(
+                r"C_p=\frac{V}{P\times D}"
+            )
+
+
+            st.write(
+
+                f"**Cₚ = "
+                f"{consumo:.2f} / "
+                f"({habitantes} × {dias}) "
+                f"= "
+                f"{consumo_persona_m3:.5f} "
+                f"m³/persona/día**"
+
+            )
+
+
+            st.write(
+                "Posteriormente se aplica "
+                "el modelo logarítmico:"
+            )
+
+
+            st.latex(
+                r"I_L=\log_{10}(1+C_p)"
+            )
+
+
+            st.write(
+
+                f"**Iₗ = log₁₀"
+                f"(1 + "
+                f"{consumo_persona_m3:.5f}) "
+                f"= {indice_log:.4f}**"
+
+            )
+
+
+            # RECOMENDACIONES
+
+            st.divider()
+
+
+            st.subheader(
+                "💡 Recomendaciones"
+            )
+
+
+            recomendaciones = (
+                recomendaciones_por_nivel(
+                    nivel
+                )
+            )
+
+
+            for titulo, descripcion in (
+                recomendaciones
+            ):
+
+                st.markdown(
+
+                    f"""
+                    <div class="tip">
+
+                        <h4>
+                        {titulo}
+                        </h4>
+
+                        <p>
+                        {descripcion}
+                        </p>
+
+                    </div>
+                    """,
+
+                    unsafe_allow_html=True
+
+                )
+
+
+# ============================================================
+# BASE DE DATOS
+# ============================================================
+
+elif opcion == "📊 Base de datos":
+
+    st.header(
+        "📊 Base de datos de usuarios"
+    )
+
+
+    df = normalizar_df(
+        st.session_state.df
+    )
+
+
+    if df.empty:
 
         st.info(
-            "💧 Registra hogares para visualizar los gráficos."
+            "💧 Todavía no existen registros."
         )
+
 
     else:
 
-        df = pd.DataFrame(
-            st.session_state.hogares
+        c1, c2 = st.columns(2)
+
+
+        with c1:
+
+            filtro_nivel = st.selectbox(
+
+                "📊 Filtrar por nivel",
+
+                [
+
+                    "TODOS",
+
+                    "BAJO",
+
+                    "MODERADO",
+
+                    "ALTO"
+
+                ]
+
+            )
+
+
+        with c2:
+
+            busqueda = st.text_input(
+
+                "🔎 Buscar código",
+
+                placeholder="Ejemplo: U001"
+
+            )
+
+
+        filtrado = df.copy()
+
+
+        if filtro_nivel != "TODOS":
+
+            filtrado = filtrado[
+
+                filtrado[
+                    "Nivel"
+                ]
+
+                == filtro_nivel
+
+            ]
+
+
+        if busqueda.strip():
+
+            filtrado = filtrado[
+
+                filtrado[
+                    "Hogar"
+                ]
+
+                .astype(str)
+
+                .str.contains(
+
+                    busqueda.strip(),
+
+                    case=False,
+
+                    na=False
+
+                )
+
+            ]
+
+
+        st.dataframe(
+
+            filtrado,
+
+            use_container_width=True,
+
+            hide_index=True
+
         )
 
-        st.subheader(
-            "💧 Consumo mensual por hogar"
+
+        # DESCARGA
+
+        csv = (
+
+            filtrado
+
+            .to_csv(
+                index=False
+            )
+
+            .encode(
+                "utf-8-sig"
+            )
+
         )
+
+
+        st.download_button(
+
+            "📥 Descargar datos en CSV",
+
+            data=csv,
+
+            file_name=
+            "AquaLog_usuarios.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )
+
+
+        # IMPORTAR
+
+        st.divider()
+
+
+        st.subheader(
+            "📤 Importar datos"
+        )
+
+
+        archivo = st.file_uploader(
+
+            "Sube un archivo CSV de AquaLog BI",
+
+            type=[
+                "csv"
+            ]
+
+        )
+
+
+        if archivo is not None:
+
+            try:
+
+                importado = (
+                    pd.read_csv(
+                        archivo
+                    )
+                )
+
+                importado = (
+                    normalizar_df(
+                        importado
+                    )
+                )
+
+
+                if st.button(
+
+                    "✅ REEMPLAZAR BASE "
+                    "CON ESTE CSV",
+
+                    use_container_width=True
+
+                ):
+
+                    st.session_state.df = (
+                        importado
+                    )
+
+                    guardar_datos(
+                        importado
+                    )
+
+                    st.success(
+                        "✅ Base de datos "
+                        "importada correctamente."
+                    )
+
+                    st.rerun()
+
+
+            except Exception as error:
+
+                st.error(
+                    f"No se pudo leer "
+                    f"el archivo: {error}"
+                )
+
+
+        # ELIMINAR
+
+        st.divider()
+
+
+        st.subheader(
+            "🗑️ Eliminar un registro"
+        )
+
+
+        eliminar = st.text_input(
+
+            "Código del usuario "
+            "que deseas eliminar",
+
+            placeholder="Ejemplo: U001"
+
+        )
+
+
+        if st.button(
+
+            "🗑️ ELIMINAR REGISTRO",
+
+            use_container_width=True
+
+        ):
+
+
+            codigo_eliminar = (
+
+                eliminar
+                .strip()
+                .upper()
+
+            )
+
+
+            codigos_actuales = (
+
+                df["Hogar"]
+
+                .astype(str)
+
+                .str.upper()
+
+                .tolist()
+
+            )
+
+
+            if (
+                codigo_eliminar
+                in codigos_actuales
+            ):
+
+                st.session_state.df = (
+
+                    df[
+
+                        df["Hogar"]
+
+                        .astype(str)
+
+                        .str.upper()
+
+                        != codigo_eliminar
+
+                    ]
+
+                    .reset_index(
+                        drop=True
+                    )
+
+                )
+
+
+                guardar_datos(
+                    st.session_state.df
+                )
+
+
+                st.success(
+                    "✅ Registro eliminado."
+                )
+
+
+                st.rerun()
+
+
+            else:
+
+                st.error(
+                    "⚠️ No se encontró "
+                    "ese código."
+                )
+
+
+# ============================================================
+# ANÁLISIS Y GRÁFICOS
+# ============================================================
+
+elif opcion == "📈 Análisis y gráficos":
+
+    st.header(
+        "📈 Análisis del consumo de agua"
+    )
+
+
+    df = normalizar_df(
+        st.session_state.df
+    )
+
+
+    if df.empty:
+
+        st.info(
+            "💧 Registra usuarios "
+            "para generar gráficos."
+        )
+
+
+    else:
+
+
+        # GRÁFICO 1
+
+        st.subheader(
+            "💧 Consumo mensual por usuario"
+        )
+
 
         fig, ax = plt.subplots(
             figsize=(10, 5)
         )
 
+
         ax.bar(
-            df["Hogar"],
-            df["Consumo mensual (m³)"]
+
+            df["Hogar"]
+            .astype(str),
+
+            pd.to_numeric(
+
+                df[
+                    "Consumo mensual (m³)"
+                ],
+
+                errors="coerce"
+
+            )
+
         )
 
+
         ax.set_xlabel(
-            "Hogar"
+            "Usuario"
         )
+
 
         ax.set_ylabel(
             "Consumo mensual (m³)"
         )
 
+
         ax.set_title(
-            "Consumo mensual de agua"
+            "Consumo mensual registrado"
         )
+
 
         ax.grid(
             axis="y",
             alpha=0.2
         )
 
-        st.pyplot(fig)
 
-        plt.close(fig)
+        plt.xticks(
+            rotation=45
+        )
+
+
+        st.pyplot(
+            fig
+        )
+
+
+        plt.close(
+            fig
+        )
+
+
+        # GRÁFICO 2
 
         st.subheader(
             "👤 Consumo diario por persona"
         )
 
+
         fig2, ax2 = plt.subplots(
             figsize=(10, 5)
         )
 
-        ax2.bar(
-            df["Hogar"],
+
+        valores = pd.to_numeric(
+
             df[
                 "Consumo por persona (L/día)"
-            ]
+            ],
+
+            errors="coerce"
+
         )
 
-        ax2.set_xlabel(
-            "Hogar"
+
+        ax2.bar(
+
+            df["Hogar"]
+            .astype(str),
+
+            valores
+
         )
+
+
+        ax2.axhline(
+
+            100,
+
+            linestyle="--",
+
+            label=
+            "Referencia 100 L/persona/día"
+
+        )
+
+
+        ax2.axhline(
+
+            170,
+
+            linestyle="--",
+
+            label=
+            "Referencia 170 L/persona/día"
+
+        )
+
+
+        ax2.set_xlabel(
+            "Usuario"
+        )
+
 
         ax2.set_ylabel(
             "Litros/persona/día"
         )
 
+
         ax2.set_title(
             "Consumo diario por persona"
         )
+
+
+        ax2.legend()
+
 
         ax2.grid(
             axis="y",
             alpha=0.2
         )
 
-        st.pyplot(fig2)
 
-        plt.close(fig2)
+        plt.xticks(
+            rotation=45
+        )
+
+
+        st.pyplot(
+            fig2
+        )
+
+
+        plt.close(
+            fig2
+        )
+
+
+        c1, c2 = st.columns(2)
+
+
+        # GRÁFICO 3
+
+        with c1:
+
+            st.subheader(
+                "📊 Distribución por nivel"
+            )
+
+
+            niveles = (
+                df[
+                    "Nivel"
+                ]
+                .value_counts()
+            )
+
+
+            fig3, ax3 = (
+                plt.subplots(
+                    figsize=(7, 5)
+                )
+            )
+
+
+            ax3.pie(
+
+                niveles.values,
+
+                labels=
+                niveles.index,
+
+                autopct=
+                "%1.1f%%"
+
+            )
+
+
+            ax3.set_title(
+                "Nivel de consumo"
+            )
+
+
+            st.pyplot(
+                fig3
+            )
+
+
+            plt.close(
+                fig3
+            )
+
+
+        # GRÁFICO 4
+
+        with c2:
+
+            st.subheader(
+                "🔢 Índice logarítmico"
+            )
+
+
+            fig4, ax4 = (
+                plt.subplots(
+                    figsize=(7, 5)
+                )
+            )
+
+
+            ax4.bar(
+
+                df["Hogar"]
+                .astype(str),
+
+                pd.to_numeric(
+
+                    df[
+                        "Índice logarítmico"
+                    ],
+
+                    errors="coerce"
+
+                )
+
+            )
+
+
+            ax4.set_xlabel(
+                "Usuario"
+            )
+
+
+            ax4.set_ylabel(
+                "Índice logarítmico"
+            )
+
+
+            ax4.set_title(
+                "Índice logarítmico "
+                "por usuario"
+            )
+
+
+            ax4.grid(
+                axis="y",
+                alpha=0.2
+            )
+
+
+            plt.xticks(
+                rotation=45
+            )
+
+
+            st.pyplot(
+                fig4
+            )
+
+
+            plt.close(
+                fig4
+            )
+
+
+        # RANKING
+
+        st.subheader(
+            "🏆 Usuarios con mayor consumo"
+        )
+
+
+        ranking = (
+
+            df
+
+            .sort_values(
+
+                "Consumo mensual (m³)",
+
+                ascending=False
+
+            )
+
+            [
+
+                [
+
+                    "Hogar",
+
+                    "Habitantes",
+
+                    "Consumo mensual (m³)",
+
+                    "Consumo por persona (L/día)",
+
+                    "Nivel"
+
+                ]
+
+            ]
+
+            .head(10)
+
+        )
+
+
+        st.dataframe(
+
+            ranking,
+
+            use_container_width=True,
+
+            hide_index=True
+
+        )
 
 
 # ============================================================
-# RECOMENDACIONES
+# RECOMENDACIONES GENERALES
 # ============================================================
 
 elif opcion == "💡 Recomendaciones":
 
     st.header(
-        "💡 Consejos para ahorrar agua"
+        "💡 Recomendaciones "
+        "para el ahorro de agua"
     )
 
+
     st.write(
-        "Pequeñas acciones diarias pueden ayudar "
-        "a reducir el consumo de agua."
+        "Pequeñas acciones cotidianas "
+        "pueden contribuir a reducir "
+        "el desperdicio de agua."
     )
+
 
     recomendaciones_generales = [
 
         (
-            "🚰 Cerrar los caños",
-            "Cierra el caño mientras te cepillas "
-            "los dientes, te enjabonas las manos "
-            "o realizas una actividad que no "
-            "requiera que el agua esté corriendo."
+            "🚰 Cierra los caños",
+
+            "No dejes abierto el caño "
+            "mientras te cepillas los dientes, "
+            "te enjabonas o realizas actividades "
+            "que no requieren flujo continuo."
         ),
 
         (
-            "🚿 Reducir el tiempo de ducha",
-            "Procura reducir el tiempo de la ducha "
-            "y evita dejar correr el agua mientras "
-            "te aplicas jabón o champú."
+            "🚿 Reduce las duchas",
+
+            "Disminuye el tiempo de ducha "
+            "y cierra el agua mientras "
+            "utilizas jabón o champú."
         ),
 
         (
-            "🔧 Revisar fugas",
-            "Revisa periódicamente caños, grifos, "
-            "inodoros y tuberías. Una fuga puede "
-            "generar desperdicio constante."
+            "🔧 Repara las fugas",
+
+            "Revisa caños, conexiones, "
+            "tanques, tuberías e inodoros. "
+            "Una fuga constante puede "
+            "incrementar considerablemente "
+            "el consumo."
         ),
 
         (
-            "🦷 Cepillarse los dientes",
-            "Cierra el caño mientras te cepillas "
-            "los dientes y ábrelo solamente para "
-            "enjuagarte."
+            "🪣 Usa recipientes",
+
+            "En determinadas tareas "
+            "de limpieza utiliza un balde "
+            "en lugar de mantener "
+            "el agua corriendo."
         ),
 
         (
-            "🧺 Usar correctamente la lavadora",
-            "Procura utilizar la lavadora cuando "
-            "tenga una carga suficiente para evitar "
-            "utilizar agua innecesariamente."
+            "🧺 Optimiza la lavadora",
+
+            "Utiliza cargas completas "
+            "y evita realizar ciclos "
+            "innecesarios."
         ),
 
         (
-            "🪣 Utilizar recipientes",
-            "Para algunas tareas de limpieza, utiliza "
-            "un recipiente con agua en lugar de dejar "
-            "el caño abierto continuamente."
+            "🌱 Riega responsablemente",
+
+            "Riega temprano por la mañana "
+            "o al finalizar la tarde para "
+            "disminuir la pérdida de agua "
+            "por evaporación."
         ),
 
         (
-            "🌱 Cuidar el agua de riego",
-            "Riega las plantas preferentemente durante "
-            "las primeras horas de la mañana o al final "
-            "de la tarde."
+            "🚽 Revisa el inodoro",
+
+            "Comprueba que el tanque "
+            "no continúe descargando agua "
+            "después de ser utilizado."
         ),
 
         (
-            "♻️ Reutilizar agua",
-            "Cuando sea apropiado y seguro, reutiliza "
-            "agua para actividades como limpieza "
-            "o riego."
+            "♻️ Reutiliza agua",
+
+            "Cuando sea apropiado y seguro, "
+            "reutiliza agua para actividades "
+            "como limpieza o riego."
         ),
 
         (
-            "🚽 Revisar el inodoro",
-            "Comprueba que el inodoro no tenga fugas "
-            "y evita utilizar más agua de la necesaria."
-        ),
+            "📊 Controla tu consumo",
 
-        (
-            "📊 Registrar el consumo",
-            "Anota periódicamente el consumo del hogar "
-            "para identificar aumentos o disminuciones."
+            "Registra periódicamente "
+            "el consumo para identificar "
+            "aumentos y evaluar tus "
+            "hábitos de ahorro."
         )
+
     ]
 
-    for titulo, descripcion in recomendaciones_generales:
+
+    for titulo, descripcion in (
+        recomendaciones_generales
+    ):
 
         st.markdown(
+
             f"""
-            <div class="recommendation">
+            <div class="tip">
 
-            <h3>{titulo}</h3>
+                <h4>
+                {titulo}
+                </h4>
 
-            <p>{descripcion}</p>
+                <p>
+                {descripcion}
+                </p>
 
             </div>
             """,
+
             unsafe_allow_html=True
+
         )
+
+
+# ============================================================
+# MODELO MATEMÁTICO
+# ============================================================
+
+elif opcion == "🧮 Modelo matemático":
+
+    st.header(
+        "🧮 Modelo matemático "
+        "de AquaLog BI"
+    )
+
+
+    st.markdown(
+        """
+        <div class="glass">
+
+            <h3>
+            1. Consumo diario por persona
+            </h3>
+
+            <p>
+            El consumo mensual se distribuye
+            entre el número de habitantes
+            y los días correspondientes
+            al periodo analizado.
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    st.latex(
+        r"C_p=\frac{V}{P\times D}"
+    )
+
+
+    st.write(
+        "**V** = volumen mensual "
+        "consumido en metros cúbicos."
+    )
+
+
+    st.write(
+        "**P** = número de habitantes "
+        "del hogar."
+    )
+
+
+    st.write(
+        "**D** = cantidad de días "
+        "del periodo."
+    )
+
+
+    st.write(
+        "**Cₚ** = consumo por persona "
+        "en m³/persona/día."
+    )
+
+
+    st.divider()
+
+
+    st.markdown(
+        """
+        <div class="glass">
+
+            <h3>
+            2. Índice logarítmico
+            </h3>
+
+            <p>
+            AquaLog BI aplica una
+            transformación logarítmica
+            al consumo por persona para
+            representar los valores en
+            una escala comprimida y
+            facilitar su comparación.
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    st.latex(
+        r"I_L=\log_{10}(1+C_p)"
+    )
+
+
+    st.write(
+        "**Iₗ** representa el "
+        "índice logarítmico obtenido."
+    )
+
+
+    st.write(
+        "El valor 1 se incorpora "
+        "para mantener definida "
+        "la expresión matemática "
+        "cuando el consumo sea cero."
+    )
+
+
+    st.warning(
+        "⚠️ Los rangos de consumo "
+        "utilizados para clasificar "
+        "BAJO, MODERADO y ALTO "
+        "son criterios referenciales "
+        "del prototipo y deben quedar "
+        "sustentados metodológicamente "
+        "en la investigación."
+    )
+
+
+# ============================================================
+# ACERCA DEL PROYECTO
+# ============================================================
+
+elif opcion == "ℹ️ Acerca del proyecto":
+
+    st.header(
+        "ℹ️ Acerca de AquaLog BI"
+    )
+
+
+    st.markdown(
+        """
+        <div class="glass">
+
+            <h3>
+            📘 Proyecto de investigación
+            </h3>
+
+            <p>
+            <b>
+            Desarrollo de software basado
+            en logaritmos matemáticos para
+            la gestión eficiente del agua
+            en el distrito de Baños del Inca,
+            2026.
+            </b>
+            </p>
+
+            <p>
+            📍 Ámbito de aplicación:
+            <b>
+            Sector La Esperanza –
+            CAS Los Berros
+            </b>
+            </p>
+
+            <p>
+            👥 Muestra:
+            <b>
+            75 usuarios
+            </b>
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    # DOCENTE
+
+    st.subheader(
+        "👩‍🏫 Docente"
+    )
+
+
+    st.markdown(
+        """
+        <div class="credit">
+
+            <h3>
+            👩‍🏫 Paola Ponce
+            </h3>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    # INTEGRANTES
+
+    st.subheader(
+        "👥 Integrantes"
+    )
+
+
+    integrantes = [
+
+        "Chuquiruna Escobal, Jhersonn",
+
+        "Paz Muñoz, Vili",
+
+        "Vasquez Azañero, Diego",
+
+        "Vasquez Bustamante, Nathan Lowell"
+
+    ]
+
+
+    for integrante in integrantes:
+
+        st.markdown(
+
+            f"""
+            <div class="credit">
+
+                👤
+                <b>
+                {integrante}
+                </b>
+
+            </div>
+            """,
+
+            unsafe_allow_html=True
+
+        )
+
+
+    # FINALIDAD
+
+    st.subheader(
+        "🎯 Finalidad del proyecto"
+    )
+
+
+    st.markdown(
+        """
+        <div class="glass">
+
+            <p>
+            AquaLog BI busca apoyar el
+            registro, procesamiento y análisis
+            del consumo doméstico de agua
+            mediante herramientas matemáticas
+            y tecnológicas que faciliten
+            la interpretación de los datos
+            y contribuyan a promover
+            un uso responsable del agua.
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    # FUNCIONES
+
+    st.subheader(
+        "⚙️ ¿Qué realiza AquaLog BI?"
+    )
+
+
+    st.markdown(
+        """
+        <div class="glass">
+
+        <p>
+        📝 Registra información de los usuarios.
+        </p>
+
+        <p>
+        💧 Procesa el consumo mensual de agua.
+        </p>
+
+        <p>
+        👤 Calcula el consumo diario por persona.
+        </p>
+
+        <p>
+        🧮 Aplica un modelo basado en logaritmos.
+        </p>
+
+        <p>
+        📊 Clasifica los resultados obtenidos.
+        </p>
+
+        <p>
+        📈 Genera gráficos para interpretar
+        la información.
+        </p>
+
+        <p>
+        💡 Proporciona recomendaciones
+        relacionadas con el ahorro de agua.
+        </p>
+
+        <p>
+        📥 Permite descargar los datos
+        registrados.
+        </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 # ============================================================
@@ -1387,14 +2834,34 @@ elif opcion == "💡 Recomendaciones":
 
 st.divider()
 
-st.markdown("""
-<div class="footer">
 
-💧 <b>AquaLog BI</b><br><br>
+st.markdown(
+    """
+    <div class="footer">
 
-Gestión eficiente del agua mediante herramientas matemáticas<br>
+        💧
+        <b>
+        AquaLog BI
+        </b>
 
-📍 Baños del Inca - Cajamarca | 📅 2026
+        <br><br>
 
-</div>
-""", unsafe_allow_html=True)
+        Inteligencia matemática para
+        el cuidado y gestión eficiente
+        del agua
+
+        <br>
+
+        📍 Sector La Esperanza
+        · CAS Los Berros
+        · Baños del Inca
+        · Cajamarca
+
+        <br>
+
+        📅 2026
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
