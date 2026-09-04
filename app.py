@@ -1,3 +1,14 @@
+if "iniciado" not in st.session_state:
+    st.session_state.iniciado = False
+
+if not st.session_state.iniciado:
+    # AQUÍ VA LA PORTADA
+
+    if st.button("🚀 EMPEZAR"):
+        st.session_state.iniciado = True
+        st.rerun()
+
+    st.stop()
 import streamlit as st
 import pandas as pd
 import math
